@@ -1,6 +1,10 @@
 name: Branch policy
 
 on:
+  push:
+    branches:
+      - main
+      - develop
   pull_request:
     branches:
       - main
@@ -28,4 +32,9 @@ jobs:
           package-manager-cache: false
 
       - name: Enforce main → develop → feature flow
-        run: node scripts/branch-policy.mjs "$GITHUB_BASE_REF" "$GITHUB_HEAD_REF"
+        run: |
+          if [[ "$GITHUB_EVENT_NAME" == "pull_request" ]]; then
+            node scripts/branch-policy.mjs "$GITHUB_BASE_REF" "$GITHUB_HEAD_REF"
+          else
+            echo "Protected branch push recorded after GitHub branch-rule enforcement."
+          fi

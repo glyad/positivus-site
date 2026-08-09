@@ -1,29 +1,35 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - "v*.*.*"
+  pull_request:
+    branches:
+      - main
+    types:
+      - closed
 
 permissions:
   contents: write
+  pull-requests: write
 
 concurrency:
-  group: release-${{ github.ref }}
+  group: release-main
   cancel-in-progress: false
 
 jobs:
   publish:
-    name: Verify, package, and publish
+    name: Verify, tag, publish, and synchronize
+    if: >-
+      github.event.pull_request.merged == true &&
+      github.event.pull_request.head.ref == 'develop'
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
 
     steps:
-      - name: Check out tagged history
+      - name: Check out released main history
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-          persist-credentials: false
+          ref: main
 
       - name: Set up Node.js
         uses: actions/setup-node@v6
@@ -34,13 +40,20 @@ jobs:
       - name: Install repository metadata
         run: npm ci
 
-      - name: Verify version and tag metadata
-        run: node scripts/release-guard.mjs --tag "$GITHUB_REF_NAME" --allow-detached
+      - name: Verify regular release merge
+        env:
+          DEVELOP_HEAD: ${{ github.event.pull_request.head.sha }}
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+        run: npm run release:merge-guard -- "$MERGE_SHA" "$DEVELOP_HEAD"
 
-      - name: Verify tag is contained in main
-        run: |
-          git fetch origin main --no-tags
-          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+      - name: Plan the incremented release version
+        id: release
+        run: node scripts/release-plan.mjs --github-output "$GITHUB_OUTPUT"
+
+      - name: Verify release metadata
+        env:
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: npm run release:guard -- --tag "$RELEASE_TAG"
 
       - name: Run required checks
         run: npm run check
@@ -48,21 +61,45 @@ jobs:
       - name: Create release package and checksum
         run: npm run package
 
-      - name: Upload release artifact
+      - name: Create annotated release tag
+        env:
+          MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git tag -a "$RELEASE_TAG" "$MERGE_SHA" -m "Release $RELEASE_TAG"
+          git push origin "refs/tags/$RELEASE_TAG"
+
+      - name: Upload release workflow artifact
         uses: actions/upload-artifact@v7
         with:
-          name: positivus-site-${{ github.ref_name }}
+          name: positivus-site-${{ steps.release.outputs.tag }}
           path: artifacts/
           if-no-files-found: error
           retention-days: 30
 
-      - name: Create GitHub Release
+      - name: Publish GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
         run: >-
-          gh release create "$GITHUB_REF_NAME"
+          gh release create "$RELEASE_TAG"
           artifacts/*.tar.gz
           artifacts/SHA256SUMS.txt
           --verify-tag
           --generate-notes
-          --title "Positivus $GITHUB_REF_NAME"
+          --title "Positivus $RELEASE_TAG"
+
+      - name: Open and auto-merge main synchronization pull request
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          sync_pr="$(gh pr list --base develop --head main --state open --json number --jq '.[0].number')"
+          if [[ -z "$sync_pr" ]]; then
+            sync_url="$(gh pr create --base develop --head main --title "chore: synchronize develop after $RELEASE_TAG" --body "Automated post-release synchronization from \`main\` into \`develop\`. This pull request must use a regular merge commit.")"
+            sync_pr="${sync_url##*/}"
+          fi
+          gh pr merge "$sync_pr" --repo "$GITHUB_REPOSITORY" --merge --auto
+          echo "Post-release synchronization PR: #$sync_pr"

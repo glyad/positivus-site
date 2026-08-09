@@ -7,8 +7,12 @@ export function validateBranchPolicy(baseBranch, headBranch) {
     return "pull requests into main must come from develop";
   }
 
-  if (baseBranch === "develop" && !/^feature\/[a-z0-9][a-z0-9._-]*$/.test(headBranch)) {
-    return "pull requests into develop must come from feature/<short-description>";
+  if (
+    baseBranch === "develop" &&
+    headBranch !== "main" &&
+    !/^feature\/[a-z0-9][a-z0-9._-]*$/.test(headBranch)
+  ) {
+    return "pull requests into develop must come from feature/<short-description> or main for post-release synchronization";
   }
 
   if (!["main", "develop"].includes(baseBranch)) {

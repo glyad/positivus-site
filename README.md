@@ -36,6 +36,8 @@ Open `http://127.0.0.1:4173/`. The development command builds the site into `dis
 | `npm run package` | Build a release tarball and SHA-256 checksum in `artifacts/`. |
 | `npm run release:dry-run` | Run release checks from a non-main preparation branch without creating a tag. |
 | `npm run release:guard` | Enforce clean, synchronized release metadata on `main`. |
+| `npm run release:merge-guard` | Verify that a release commit is a regular two-parent merge. |
+| `npm run release:plan` | Verify that the prepared package version increments the latest release tag. |
 | `npm run qa:visual` | Regenerate visual comparison images when Pillow is installed. |
 
 ## Repository structure
@@ -61,7 +63,7 @@ The repository uses a protected three-level flow:
 main ← develop ← feature/<short-description>
 ```
 
-Feature pull requests target `develop`. Release pull requests promote `develop` to `main`. Semantic version tags are created only from commits contained in `main`; the tag workflow verifies the version, runs all checks, packages the static build, writes a checksum, and creates the GitHub Release.
+Feature pull requests target `develop`. Release pull requests promote `develop` to `main`, and every pull request uses a regular merge commit—squash and rebase are disabled. A successful release merge verifies the prepared version increment, creates its annotated tag, runs all checks, packages the static build, writes a checksum, creates the GitHub Release, and opens an auto-merged synchronization pull request from `main` back to `develop`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md), and [docs/branching.md](docs/branching.md) for the complete process.
 

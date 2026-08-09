@@ -12,6 +12,7 @@ Do not edit `dist/` or `artifacts/`; both are generated and ignored.
 ## Pull requests
 
 - Feature and fix pull requests target `develop`.
+- Pull requests are merged with regular merge commits, never squash or rebase.
 - Keep one focused change per pull request.
 - Use a clear Conventional Commit-style title when practical.
 - Update tests and documentation with behavior or tooling changes.
@@ -27,4 +28,4 @@ Preferred prefixes are `feat:`, `fix:`, `docs:`, `test:`, `build:`, `ci:`, `chor
 
 ## Releases
 
-Release pull requests promote `develop` into `main`. Do not tag feature or develop commits. Follow [RELEASING.md](RELEASING.md) for versioning, guards, packaging, and tag creation.
+Release pull requests promote `develop` into `main` with a regular merge commit. The successful merge triggers the guarded tag, artifact, GitHub Release, and `main` → `develop` synchronization automation. Do not tag feature or develop commits. Follow [RELEASING.md](RELEASING.md) for the complete process.

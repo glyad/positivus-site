@@ -102,6 +102,8 @@ for (const requiredScript of [
   "lint",
   "package",
   "release:guard",
+  "release:merge-guard",
+  "release:plan",
   "test",
 ]) {
   if (!packageMetadata.scripts?.[requiredScript]) {

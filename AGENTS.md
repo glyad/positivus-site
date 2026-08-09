@@ -13,6 +13,8 @@
 - Branch from `develop` using `feature/<short-description>`.
 - Merge feature branches into `develop` through pull requests.
 - Promote `develop` to `main` through a release pull request.
+- Always use regular two-parent merge commits; never squash or rebase a pull request.
+- Synchronize `develop` from `main` after every successful release, and never delete `develop`.
 - Create version tags only from commits contained in `main`.
 - Use Conventional Commit-style subjects where practical, such as `feat:`, `fix:`, `docs:`, `chore:`, and `release:`.
 
