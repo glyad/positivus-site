@@ -30,3 +30,19 @@ draw.text((24, 20), "REFERENCE", fill="#B9FF66", font=font)
 draw.text((768, 20), "IMPLEMENTATION", fill="#B9FF66", font=font)
 
 canvas.save(QA / "hero-comparison.jpg", quality=92, optimize=True)
+
+hebrew_implementation = Image.open(QA / "hebrew-desktop-1440.png").convert("RGB")
+hebrew_view = hebrew_implementation.crop((0, 0, 1440, 900)).resize(
+    (480, 300), Image.Resampling.LANCZOS
+)
+
+rtl_canvas = Image.new("RGB", (1488, 364), "#191A23")
+rtl_canvas.paste(reference_view.resize((480, 300), Image.Resampling.LANCZOS), (0, 64))
+rtl_canvas.paste(implementation_view.resize((480, 300), Image.Resampling.LANCZOS), (504, 64))
+rtl_canvas.paste(hebrew_view, (1008, 64))
+
+rtl_draw = ImageDraw.Draw(rtl_canvas)
+rtl_draw.text((18, 18), "REFERENCE", fill="#B9FF66", font=font)
+rtl_draw.text((522, 18), "ENGLISH", fill="#B9FF66", font=font)
+rtl_draw.text((1026, 18), "HEBREW RTL", fill="#B9FF66", font=font)
+rtl_canvas.save(QA / "rtl-comparison.jpg", quality=92, optimize=True)

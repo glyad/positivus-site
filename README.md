@@ -28,11 +28,14 @@ The browser stylesheet is committed so the site can be opened or served without 
 ## Features
 
 - Responsive navigation and menu overlay.
+- English/Hebrew language switch with persistent RTL/LTR layout changes.
 - Desktop and mobile hero compositions.
 - Service, case study, process, team, testimonial, contact, and footer sections.
 - Accessible accordion, testimonial carousel, contact validation, and newsletter feedback.
 - Reduced-motion support and visible keyboard focus.
 - No frontend frameworks or runtime libraries.
+
+The language control sits beside the primary quote action on desktop and inside the mobile navigation. The selected language is saved locally and restores on reload.
 
 ## Credits
 

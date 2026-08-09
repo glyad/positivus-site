@@ -14,6 +14,7 @@
   --white: #fff;
   --error: #b42318;
   --font: "Space Grotesk", system-ui, sans-serif;
+  --font-hebrew: "Arial Hebrew", Arial, "Helvetica Neue", sans-serif;
   --radius-small: 7px;
   --radius-control: 14px;
   --radius-card: 45px;
@@ -32,6 +33,20 @@
 html {
   scroll-behavior: smooth;
   scroll-padding-top: 100px;
+}
+
+html[lang="he"] body {
+  font-family: var(--font-hebrew);
+}
+
+html[lang="he"] .brand {
+  font-family: var(--font);
+}
+
+html[lang="he"] h1,
+html[lang="he"] h2,
+html[lang="he"] h3 {
+  letter-spacing: 0;
 }
 
 body {
@@ -105,7 +120,7 @@ ul {
 .skip-link {
   position: fixed;
   top: 10px;
-  left: 10px;
+  inset-inline-start: 10px;
   z-index: 1000;
   padding: 12px 18px;
   border-radius: var(--radius-control);
@@ -185,6 +200,7 @@ ul {
   align-items: center;
   gap: 9px;
   color: var(--black);
+  direction: ltr;
   text-decoration: none;
 }
 
@@ -289,7 +305,7 @@ ul {
   justify-content: center;
   width: 48px;
   height: 48px;
-  margin-right: -10px;
+  margin-inline-end: -10px;
   padding: 0;
   border: 0;
   color: var(--black);
@@ -341,6 +357,37 @@ ul {
 
 .site-nav__cta {
   width: 100%;
+}
+
+.language-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  justify-self: start;
+  min-width: 78px;
+  min-height: 48px;
+  padding: 10px 18px;
+  border: 1px solid var(--black);
+  border-radius: var(--radius-control);
+  color: var(--black);
+  background: var(--green);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--transition),
+    background-color var(--transition),
+    transform 160ms ease;
+}
+
+.language-toggle:hover {
+  color: var(--white);
+  background: var(--dark);
+  transform: translateY(-2px);
+}
+
+.language-toggle:active {
+  transform: translateY(0);
 }
 
 .nav-backdrop {
@@ -859,7 +906,7 @@ ul {
 .testimonial blockquote::after {
   position: absolute;
   bottom: -29px;
-  left: 40px;
+  inset-inline-start: 40px;
   content: "";
   width: 64px;
   height: 39px;
@@ -869,7 +916,20 @@ ul {
 .testimonial footer {
   display: flex;
   flex-direction: column;
-  margin: 42px 0 0 18%;
+  margin-block-start: 42px;
+  margin-inline-start: 18%;
+}
+
+.testimonials__track {
+  direction: ltr;
+}
+
+.testimonial {
+  direction: inherit;
+}
+
+html[dir="rtl"] .testimonial {
+  direction: rtl;
 }
 
 .testimonial footer strong {
@@ -1025,6 +1085,39 @@ ul {
 .field input,
 .field textarea {
   padding: 18px 20px;
+}
+
+input[type="email"],
+input[type="tel"] {
+  direction: ltr;
+}
+
+html[dir="rtl"] input[type="email"],
+html[dir="rtl"] input[type="tel"] {
+  text-align: left;
+}
+
+.process-card__number,
+.brand__name,
+.team-card__identity h3,
+.testimonial strong {
+  unicode-bidi: plaintext;
+}
+
+html[dir="rtl"] :where(.arrow-link, .plain-arrow-link) .icon-mask--arrow {
+  scale: -1 1;
+}
+
+html[dir="rtl"] .plain-arrow-link:hover .icon-mask {
+  transform: translate(-3px, -3px);
+}
+
+html[dir="rtl"] .carousel-button--prev .icon-mask {
+  transform: rotate(30deg);
+}
+
+html[dir="rtl"] .carousel-button--next .icon-mask {
+  transform: rotate(210deg);
 }
 
 .field textarea {
@@ -1276,7 +1369,7 @@ ul {
     position: static;
     display: flex;
     align-items: center;
-    gap: 40px;
+    gap: 20px;
     width: auto;
     max-height: none;
     padding: 0;
@@ -1290,7 +1383,7 @@ ul {
   .site-nav__list {
     display: flex;
     align-items: center;
-    gap: 40px;
+    gap: 30px;
   }
 
   .site-nav__list a {
@@ -1307,6 +1400,12 @@ ul {
 
   .site-nav__cta {
     width: auto;
+  }
+
+  .language-toggle {
+    min-width: 76px;
+    min-height: 52px;
+    padding-inline: 16px;
   }
 
   .hero {
@@ -1368,7 +1467,7 @@ ul {
     justify-content: flex-start;
     align-items: center;
     gap: 40px;
-    text-align: left;
+    text-align: start;
   }
 
   .section-heading p {
@@ -1451,7 +1550,7 @@ ul {
   .cta__image {
     position: absolute;
     top: 50%;
-    right: 80px;
+    inset-inline-end: 80px;
     display: block;
     width: 360px;
     max-height: 394px;
@@ -1497,7 +1596,7 @@ ul {
     position: absolute;
     top: 70px;
     bottom: 70px;
-    left: 0;
+    inset-inline-start: 0;
     width: 1px;
     background: var(--white);
     content: "";
@@ -1575,7 +1674,7 @@ ul {
   }
 
   .testimonial footer {
-    margin-left: 14%;
+    margin-inline-start: 14%;
   }
 
   .carousel-controls {
@@ -1623,7 +1722,7 @@ ul {
   .contact-panel__image {
     position: absolute;
     top: 50%;
-    right: -285px;
+    inset-inline-end: -285px;
     display: block;
     width: 692px;
     height: 649px;
@@ -1683,7 +1782,7 @@ ul {
 
   .contact-details {
     flex: 0 0 332px;
-    text-align: left;
+    text-align: start;
   }
 
   .contact-details address {
@@ -1700,7 +1799,7 @@ ul {
 
   .newsletter__status {
     position: absolute;
-    right: 40px;
+    inset-inline-end: 40px;
     bottom: 20px;
   }
 
@@ -1710,7 +1809,7 @@ ul {
     gap: 40px;
     margin-top: 50px;
     padding-top: 50px;
-    text-align: left;
+    text-align: start;
   }
 
   .site-footer__bottom a {
@@ -1723,9 +1822,12 @@ ul {
     --gutter: 60px;
   }
 
-  .site-nav,
+  .site-nav {
+    gap: 14px;
+  }
+
   .site-nav__list {
-    gap: 24px;
+    gap: 18px;
   }
 
   .site-nav__list a {
@@ -1736,6 +1838,22 @@ ul {
     min-height: 60px;
     padding-inline: 25px;
     font-size: 18px;
+  }
+
+  .language-toggle {
+    min-width: 70px;
+    padding-inline: 12px;
+    font-size: 15px;
+  }
+}
+
+@media (min-width: 1120px) {
+  html[dir="rtl"] .case-study:first-child {
+    border-radius: 0 var(--radius-card) var(--radius-card) 0;
+  }
+
+  html[dir="rtl"] .case-study:last-child {
+    border-radius: var(--radius-card) 0 0 var(--radius-card);
   }
 }
 
