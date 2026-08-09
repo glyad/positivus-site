@@ -1,0 +1,68 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    name: Verify, package, and publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out tagged history
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install repository metadata
+        run: npm ci
+
+      - name: Verify version and tag metadata
+        run: node scripts/release-guard.mjs --tag "$GITHUB_REF_NAME" --allow-detached
+
+      - name: Verify tag is contained in main
+        run: |
+          git fetch origin main --no-tags
+          git merge-base --is-ancestor "$GITHUB_SHA" origin/main
+
+      - name: Run required checks
+        run: npm run check
+
+      - name: Create release package and checksum
+        run: npm run package
+
+      - name: Upload release artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: positivus-site-${{ github.ref_name }}
+          path: artifacts/
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          gh release create "$GITHUB_REF_NAME"
+          artifacts/*.tar.gz
+          artifacts/SHA256SUMS.txt
+          --verify-tag
+          --generate-notes
+          --title "Positivus $GITHUB_REF_NAME"
