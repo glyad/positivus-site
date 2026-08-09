@@ -1729,6 +1729,10 @@ html[dir="rtl"] .carousel-button--next .icon-mask {
     transform: translateY(-50%);
   }
 
+  html[dir="rtl"] .contact-panel__image {
+    transform: translateY(-50%) scaleX(-1);
+  }
+
   .site-footer {
     margin-top: 140px;
     padding-inline: var(--gutter);

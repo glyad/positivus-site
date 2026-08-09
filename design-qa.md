@@ -4,20 +4,21 @@
 
 - Source visual truth: `design-qa/reference-mockup.webp`
 - Implementation: `http://127.0.0.1:4173/`
-- Primary implementation screenshots: `design-qa/english-desktop-language.png` and `design-qa/hebrew-desktop-1440.png`
+- Primary implementation screenshots: `design-qa/english-desktop-language.png`, `design-qa/hebrew-desktop-1440.png`, and `design-qa/hebrew-contact-rtl-fixed.png`
 - Source pixels: 1920 × 1080 collage; the matching landing-page panel was cropped to 705 × 441 pixels.
-- Implementation pixels: 1440 × 900 pixels for both desktop language states; 430 × 931 pixels for the Hebrew mobile state.
-- CSS viewport: 1440 × 900 desktop target and 430 × 932 mobile target.
-- Density normalization: the source panel crop and implementation viewport were both resampled to 720 × 450 for the combined comparison.
-- State: light theme, top of the landing page, English LTR and Hebrew RTL, navigation closed, first process item expanded, first testimonial selected.
+- Implementation pixels: 1440 × 900 pixels for both original desktop language states; 430 × 931 pixels for the Hebrew mobile state; and 1600 × 900 pixels for the post-fix focused RTL contact capture.
+- CSS viewport: 1440 × 900 desktop target, 1600 × 900 focused post-fix contact check, and 430 × 932 mobile target.
+- Density normalization: the source panel crop and implementation viewport were both resampled to 720 × 450 for the full-view comparison. For the RTL contact fix, the 1600 × 900 post-fix browser capture was center-cropped to 1440 × 900, then normalized with the 1440 × 900 pre-fix capture to 720 × 450.
+- State: light theme; top-of-page bilingual checks plus the Hebrew RTL contact anchor for the focused annotation check; navigation closed, first process item expanded, first testimonial selected.
 
 ## Full-view Comparison Evidence
 
 - Combined reference/implementation input: `design-qa/hero-comparison.jpg`
 - Combined reference/English/Hebrew input: `design-qa/rtl-comparison.jpg`
+- Combined pre-fix/post-fix RTL contact input: `design-qa/contact-rtl-fix-comparison.jpg`
 - The normalized comparison confirms the same desktop composition: header proportions, six-item navigation, two-column hero, three-line headline, original megaphone artwork, primary CTA, and six-logo strip.
 - The implementation preserves the source's Space Grotesk typography, near-black/lime/gray palette, generous whitespace, and asymmetric visual balance.
-- The RTL comparison confirms that the Hebrew state mirrors the layout without mirroring the Positivus brand lockup or source artwork: the brand and copy lead from the right, the hero artwork moves left, and the original spacing and visual weight remain intact.
+- The RTL comparison confirms that the Hebrew state mirrors the layout without mirroring the Positivus brand lockup or hero artwork: the brand and copy lead from the right, the hero artwork moves left, and the original spacing and visual weight remain intact. The contact illustration is intentionally mirrored because its asymmetric crop must face inward when it moves to the left side of the panel.
 
 ## Focused Region Evidence
 
@@ -29,7 +30,9 @@
 - Mobile contact form: `design-qa/mobile-contact-430.png`
 - Hebrew desktop hero and navigation: `design-qa/hebrew-desktop-1440.png`
 - Hebrew desktop service grid: `design-qa/hebrew-services-1440.png`
-- Hebrew desktop contact form: `design-qa/hebrew-contact-1440.png`
+- Hebrew desktop contact form before the annotation fix: `design-qa/hebrew-contact-1440.png`
+- Hebrew desktop contact form after the annotation fix: `design-qa/hebrew-contact-rtl-fixed.png`
+- Focused before/after contact comparison: `design-qa/contact-rtl-fix-comparison.jpg`
 - Hebrew mobile hero: `design-qa/hebrew-mobile-430.png`
 - Hebrew mobile navigation and language control: `design-qa/hebrew-menu.png`
 
@@ -41,9 +44,9 @@ Focused regions were necessary because the presentation collage compresses card 
 - Fonts and typography: local Space Grotesk is used at matching weights and hierarchy in English. Hebrew uses the platform's Arial Hebrew/Arial sans-serif fallback because Space Grotesk has no Hebrew glyph set; hierarchy, wrapping, label density, and control sizing remain visually consistent.
 - Spacing and layout rhythm: desktop gutters, 12-column hero, paired service cards, rounded 45px surfaces, 5px black card shadows, section gaps, and mobile stacking preserve the source hierarchy in both directions without root-level horizontal overflow.
 - Colors and visual tokens: `#B9FF66`, `#191A23`, `#F3F3F3`, black, and white are mapped to reusable CSS tokens. Active, disabled, focus, error, and success states remain legible.
-- Image quality and asset fidelity: the source hero, CTA, contact, service, team, logo, star, arrow, social, and control assets are local and render without missing or zero-width images. Visible artwork is not replaced with emoji, placeholder boxes, CSS drawings, or inline SVG.
+- Image quality and asset fidelity: the source hero, CTA, contact, service, team, logo, star, arrow, social, and control assets are local and render without missing or zero-width images. The focused post-fix comparison shows the contact artwork's black and lime center shapes fully visible on the left in RTL instead of clipped outside the panel. Visible artwork is not replaced with emoji, placeholder boxes, CSS drawings, or inline SVG.
 - Copy and content: the original English remains unchanged. Every app-owned heading, paragraph, CTA, service, process step, team role, testimonial, form label, placeholder, validation message, metadata string, and footer label has a natural Hebrew translation; brand and person/company names remain intentionally unchanged.
-- Icons: original icon paths are stored as external assets, consistently sized, and optically aligned across cards, controls, navigation, testimonials, and social links. Directional arrows flip in RTL while decorative source artwork remains unmirrored.
+- Icons: original icon paths are stored as external assets, consistently sized, and optically aligned across cards, controls, navigation, testimonials, and social links. Directional arrows flip in RTL; the asymmetric contact decoration also flips so its focal shapes remain inside the panel, while the brand lockup and hero artwork retain their original orientation.
 - Responsiveness: browser captures at 1440px desktop and 430px mobile, plus an intermediate-width resilience check, showed no viewport overflow, overlapping sections, clipped persistent controls, or unusable tap targets in either direction.
 - Accessibility: semantic landmarks, translated accessible names and alt text, native details/summary controls, labels, keyboard focus, Escape-to-close navigation, reduced-motion behavior, direction-aware metadata, form errors, and status messaging are implemented.
 
@@ -59,6 +62,10 @@ Focused regions were necessary because the presentation collage compresses card 
    - Fix: locked `.brand` to LTR direction while allowing its containing header and footer layouts to mirror.
    - Post-fix evidence: `design-qa/hebrew-desktop-1440.png`, `design-qa/hebrew-mobile-430.png`, and `design-qa/rtl-comparison.jpg` show the corrected lockup.
 4. Final bilingual comparison found no remaining P0/P1/P2 issues across the required fidelity surfaces.
+5. The browser annotation identified a P2 RTL image-crop issue in the contact panel: moving the asymmetric source illustration to the left without mirroring it placed the artwork's black and lime focal shapes outside the clipped panel, leaving only outer rays visible.
+   - Fix: added an RTL-only horizontal mirror to `.contact-panel__image` while preserving its existing vertical centering and leaving the English layout unchanged.
+   - Post-fix evidence: `design-qa/hebrew-contact-rtl-fixed.png` and `design-qa/contact-rtl-fix-comparison.jpg` show the complete focal artwork inside the left side of the Hebrew panel.
+6. The post-fix focused comparison found no remaining P0/P1/P2 issues in the annotated contact region.
 
 ## Primary Interactions Tested
 
@@ -80,7 +87,7 @@ Focused regions were necessary because the presentation collage compresses card 
 - [x] Match desktop and mobile layout, typography, palette, radii, borders, and shadows.
 - [x] Implement navigation, accordion, team reveal, carousel, contact form, and newsletter behavior without runtime libraries.
 - [x] Add persistent English/Hebrew switching, complete Hebrew copy, translated accessibility attributes, and document-level LTR/RTL direction.
-- [x] Mirror directional layout and arrows while preserving the brand lockup and original artwork orientation.
+- [x] Mirror directional layout and arrows while preserving the brand lockup and hero artwork orientation; mirror the asymmetric contact decoration where its RTL crop requires it.
 - [x] Check JavaScript syntax, stylesheet synchronization, external-library references, browser console, assets, and local server response.
 
 ## Follow-up Polish
