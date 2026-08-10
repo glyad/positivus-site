@@ -1,2 +1,11 @@
 .DS_Store
 *.log
+artifacts/
+coverage/
+dist/
+node_modules/
+.env
+.env.*
+!.env.example
+.idea/
+.vscode/

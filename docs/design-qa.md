@@ -2,9 +2,9 @@
 
 ## Comparison Target
 
-- Source visual truth: `design-qa/reference-mockup.webp`
+- Source visual truth: `docs/design-qa/reference-mockup.webp`
 - Implementation: `http://127.0.0.1:4173/`
-- Primary implementation screenshots: `design-qa/english-desktop-language.png`, `design-qa/hebrew-desktop-1440.png`, and `design-qa/hebrew-contact-rtl-fixed.png`
+- Primary implementation screenshots: `docs/design-qa/english-desktop-language.png`, `docs/design-qa/hebrew-desktop-1440.png`, and `docs/design-qa/hebrew-contact-rtl-fixed.png`
 - Source pixels: 1920 × 1080 collage; the matching landing-page panel was cropped to 705 × 441 pixels.
 - Implementation pixels: 1440 × 900 pixels for both original desktop language states; 430 × 931 pixels for the Hebrew mobile state; and 1600 × 900 pixels for the post-fix focused RTL contact capture.
 - CSS viewport: 1440 × 900 desktop target, 1600 × 900 focused post-fix contact check, and 430 × 932 mobile target.
@@ -13,28 +13,28 @@
 
 ## Full-view Comparison Evidence
 
-- Combined reference/implementation input: `design-qa/hero-comparison.jpg`
-- Combined reference/English/Hebrew input: `design-qa/rtl-comparison.jpg`
-- Combined pre-fix/post-fix RTL contact input: `design-qa/contact-rtl-fix-comparison.jpg`
+- Combined reference/implementation input: `docs/design-qa/hero-comparison.jpg`
+- Combined reference/English/Hebrew input: `docs/design-qa/rtl-comparison.jpg`
+- Combined pre-fix/post-fix RTL contact input: `docs/design-qa/contact-rtl-fix-comparison.jpg`
 - The normalized comparison confirms the same desktop composition: header proportions, six-item navigation, two-column hero, three-line headline, original megaphone artwork, primary CTA, and six-logo strip.
 - The implementation preserves the source's Space Grotesk typography, near-black/lime/gray palette, generous whitespace, and asymmetric visual balance.
 - The RTL comparison confirms that the Hebrew state mirrors the layout without mirroring the Positivus brand lockup or hero artwork: the brand and copy lead from the right, the hero artwork moves left, and the original spacing and visual weight remain intact. The contact illustration is intentionally mirrored because its asymmetric crop must face inward when it moves to the left side of the panel.
 
 ## Focused Region Evidence
 
-- Service grid: `design-qa/services-1440.png`
-- Working-process accordion: `design-qa/process-1440.png`
-- Mobile hero: `design-qa/mobile-430.png`
-- Mobile navigation open state: `design-qa/mobile-menu-430.png`
-- Mobile service cards: `design-qa/mobile-services-430.png`
-- Mobile contact form: `design-qa/mobile-contact-430.png`
-- Hebrew desktop hero and navigation: `design-qa/hebrew-desktop-1440.png`
-- Hebrew desktop service grid: `design-qa/hebrew-services-1440.png`
-- Hebrew desktop contact form before the annotation fix: `design-qa/hebrew-contact-1440.png`
-- Hebrew desktop contact form after the annotation fix: `design-qa/hebrew-contact-rtl-fixed.png`
-- Focused before/after contact comparison: `design-qa/contact-rtl-fix-comparison.jpg`
-- Hebrew mobile hero: `design-qa/hebrew-mobile-430.png`
-- Hebrew mobile navigation and language control: `design-qa/hebrew-menu.png`
+- Service grid: `docs/design-qa/services-1440.png`
+- Working-process accordion: `docs/design-qa/process-1440.png`
+- Mobile hero: `docs/design-qa/mobile-430.png`
+- Mobile navigation open state: `docs/design-qa/mobile-menu-430.png`
+- Mobile service cards: `docs/design-qa/mobile-services-430.png`
+- Mobile contact form: `docs/design-qa/mobile-contact-430.png`
+- Hebrew desktop hero and navigation: `docs/design-qa/hebrew-desktop-1440.png`
+- Hebrew desktop service grid: `docs/design-qa/hebrew-services-1440.png`
+- Hebrew desktop contact form before the annotation fix: `docs/design-qa/hebrew-contact-1440.png`
+- Hebrew desktop contact form after the annotation fix: `docs/design-qa/hebrew-contact-rtl-fixed.png`
+- Focused before/after contact comparison: `docs/design-qa/contact-rtl-fix-comparison.jpg`
+- Hebrew mobile hero: `docs/design-qa/hebrew-mobile-430.png`
+- Hebrew mobile navigation and language control: `docs/design-qa/hebrew-menu.png`
 
 Focused regions were necessary because the presentation collage compresses card typography, icon alignment, shadows, and form spacing too heavily for reliable judgment in a single full-view comparison.
 
@@ -53,18 +53,18 @@ Focused regions were necessary because the presentation collage compresses card 
 ## Comparison History
 
 1. First browser pass found a P1 above-the-fold layout mismatch: the desktop hero illustration inherited the mobile `grid-row: 2` rule and appeared below the copy instead of in the right six columns.
-   - Fix: set the desktop illustration to `grid-row: 1`, `grid-column: 7 / span 6`, and vertically center it in `scss/main.scss`; synchronized `css/main.css`.
-   - Post-fix evidence: `design-qa/desktop-1440.png` and `design-qa/hero-comparison.jpg` show the corrected side-by-side hero.
+   - Fix: set the desktop illustration to `grid-row: 1`, `grid-column: 7 / span 6`, and vertically center it in `sources/scss/main.scss`; synchronized the generated `dist/css/main.css` during verification.
+   - Post-fix evidence: `docs/design-qa/desktop-1440.png` and `docs/design-qa/hero-comparison.jpg` show the corrected side-by-side hero.
 2. Asset-fidelity review found a P2 shortcut in the testimonial speech-bubble tail, which was initially drawn with CSS borders.
-   - Fix: replaced the CSS triangle with the source-derived external asset `assets/icons/quote-tail.svg`.
+   - Fix: replaced the CSS triangle with the source-derived external asset `sources/assets/icons/quote-tail.svg`.
    - Post-fix evidence: the rendered testimonials retain the original dark/lime outline treatment with no CSS-drawn artwork.
 3. The first RTL visual pass found a P2 brand-integrity issue: inherited RTL flex direction moved the Positivus star to the opposite side of the wordmark.
    - Fix: locked `.brand` to LTR direction while allowing its containing header and footer layouts to mirror.
-   - Post-fix evidence: `design-qa/hebrew-desktop-1440.png`, `design-qa/hebrew-mobile-430.png`, and `design-qa/rtl-comparison.jpg` show the corrected lockup.
+   - Post-fix evidence: `docs/design-qa/hebrew-desktop-1440.png`, `docs/design-qa/hebrew-mobile-430.png`, and `docs/design-qa/rtl-comparison.jpg` show the corrected lockup.
 4. Final bilingual comparison found no remaining P0/P1/P2 issues across the required fidelity surfaces.
 5. The browser annotation identified a P2 RTL image-crop issue in the contact panel: moving the asymmetric source illustration to the left without mirroring it placed the artwork's black and lime focal shapes outside the clipped panel, leaving only outer rays visible.
    - Fix: added an RTL-only horizontal mirror to `.contact-panel__image` while preserving its existing vertical centering and leaving the English layout unchanged.
-   - Post-fix evidence: `design-qa/hebrew-contact-rtl-fixed.png` and `design-qa/contact-rtl-fix-comparison.jpg` show the complete focal artwork inside the left side of the Hebrew panel.
+   - Post-fix evidence: `docs/design-qa/hebrew-contact-rtl-fixed.png` and `docs/design-qa/contact-rtl-fix-comparison.jpg` show the complete focal artwork inside the left side of the Hebrew panel.
 6. The post-fix focused comparison found no remaining P0/P1/P2 issues in the annotated contact region.
 
 ## Primary Interactions Tested

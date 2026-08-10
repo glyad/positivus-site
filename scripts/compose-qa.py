@@ -4,7 +4,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 ROOT = Path(__file__).resolve().parents[1]
-QA = ROOT / "design-qa"
+QA = ROOT / "docs" / "design-qa"
 
 reference = Image.open(QA / "reference-mockup.webp").convert("RGB")
 implementation = Image.open(QA / "desktop-1440.png").convert("RGB")
@@ -22,7 +22,9 @@ canvas.paste(implementation_view, (744, 66))
 
 draw = ImageDraw.Draw(canvas)
 try:
-    font = ImageFont.truetype(str(ROOT / "assets/fonts/SpaceGrotesk-VariableFont_wght.ttf"), 25)
+    font = ImageFont.truetype(
+        str(ROOT / "sources/assets/fonts/SpaceGrotesk-VariableFont_wght.ttf"), 25
+    )
 except OSError:
     font = ImageFont.load_default()
 

@@ -2,43 +2,77 @@
 
 A dependency-free HTML, SCSS/CSS, and vanilla JavaScript recreation of Olga Averchenko's [Positivus Landing Page Design](https://www.figma.com/community/file/1230604708032389430/positivus-landing-page-design).
 
-## Run locally
+The site supports English LTR and automatically translated Hebrew RTL layouts. It includes responsive navigation, service cards, an accordion, team reveal, testimonial carousel, validated contact and newsletter forms, and persistent language selection.
 
-Use any static-file server, or run the included zero-dependency Node server:
+## Requirements
+
+- Node.js 20 or newer; Node.js 22 is the repository default.
+- npm 10 or newer.
+- Python 3 with Pillow only when regenerating the optional visual-QA comparison images.
+
+No frontend or runtime packages are required.
+
+## Get started
 
 ```sh
+npm ci
 npm run dev
 ```
 
-Then open `http://127.0.0.1:4173`.
+Open `http://127.0.0.1:4173/`. The development command builds the site into `dist/`, starts the local server, and rebuilds when files under `sources/` change.
 
-## Structure
+## Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Build, serve, and watch the authored sources. |
+| `npm run build` | Create the deployable `dist/` directory. |
+| `npm run serve` | Serve an existing `dist/` build. |
+| `npm run preview` | Build once and serve without watching. |
+| `npm run format:check` | Check line endings, final newlines, and trailing whitespace. |
+| `npm run lint` | Validate JavaScript syntax, local references, source guards, and repository files. |
+| `npm test` | Run the Node test suite. |
+| `npm run check` | Run all required pull-request checks and build the site. |
+| `npm run package` | Build a release tarball and SHA-256 checksum in `artifacts/`. |
+| `npm run release:dry-run` | Run release checks from a non-main preparation branch without creating a tag. |
+| `npm run release:guard` | Enforce clean, synchronized release metadata on `main`. |
+| `npm run release:merge-guard` | Verify that a release commit is a regular two-parent merge. |
+| `npm run release:plan` | Verify that the prepared package version increments the latest release tag. |
+| `npm run qa:visual` | Regenerate visual comparison images when Pillow is installed. |
+
+## Repository structure
 
 ```text
-assets/       Local fonts, original illustrations, portraits, logos, and icons
-css/main.css  Browser-ready stylesheet
-scss/main.scss Source stylesheet
-js/main.js    Dependency-free interactions
-index.html    Semantic one-page site
-server.mjs    Minimal local preview server using Node built-ins
+sources/              Authored HTML, SCSS, JavaScript, fonts, icons, and imagery
+scripts/              Build, preview, validation, package, and release tooling
+tests/                Node test-runner coverage for the repository toolchain
+docs/                 Design system, visual QA evidence, and process documentation
+.github/              CI, CodeQL, release automation, templates, and Dependabot
+dist/                 Generated deployable site; ignored by Git
+artifacts/            Generated release archives and checksums; ignored by Git
+AGENTS.md              Codex repository guidance
 ```
 
-The browser stylesheet is committed so the site can be opened or served without installing a Sass compiler. `scss/main.scss` is deliberately kept CSS-compatible, making it valid SCSS while allowing deterministic builds with no dependency installation.
+`sources/scss/main.scss` is deliberately CSS-compatible. The zero-dependency build copies it deterministically to `dist/css/main.css`, avoiding a Sass runtime while keeping a familiar source layout.
 
-## Features
+## Branching and releases
 
-- Responsive navigation and menu overlay.
-- English/Hebrew language switch with persistent RTL/LTR layout changes.
-- Desktop and mobile hero compositions.
-- Service, case study, process, team, testimonial, contact, and footer sections.
-- Accessible accordion, testimonial carousel, contact validation, and newsletter feedback.
-- Reduced-motion support and visible keyboard focus.
-- No frontend frameworks or runtime libraries.
+The repository uses a protected three-level flow:
 
-The language control sits beside the primary quote action on desktop and inside the mobile navigation. The selected language is saved locally and restores on reload.
+```text
+main ← develop ← feature/<short-description>
+```
 
-## Credits
+Feature pull requests target `develop`. Release pull requests promote `develop` to `main`, and every pull request uses a regular merge commit—squash and rebase are disabled. A successful release merge verifies the prepared version increment, creates its annotated tag, runs all checks, packages the static build, writes a checksum, creates the GitHub Release, and opens an auto-merged synchronization pull request from `main` back to `develop`.
 
-- Original design: Olga Averchenko.
-- Space Grotesk is distributed under the SIL Open Font License in `assets/fonts/OFL.txt`.
-- Source artwork and brand assets are preserved from the public Positivus reference implementation for fidelity to the original design.
+See [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md), and [docs/branching.md](docs/branching.md) for the complete process.
+
+## Design documentation
+
+- [Extracted UX/UI design system](docs/design-system.md)
+- [Implementation architecture](docs/architecture.md)
+- [Latest visual QA report](docs/design-qa.md)
+
+## Attribution and license
+
+The repository code is available under the [MIT License](LICENSE). The original design, brand artwork, image assets, and font retain their respective ownership and licenses; see [ATTRIBUTION.md](ATTRIBUTION.md) for details.
