@@ -1,10 +1,42 @@
 {
   "name": "positivus-static-site",
   "version": "1.0.0",
+  "description": "Dependency-free bilingual Positivus landing page with English LTR and Hebrew RTL layouts.",
   "private": true,
   "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "files": [
+    "dist",
+    "ATTRIBUTION.md",
+    "CHANGELOG.md",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
-    "dev": "node server.mjs",
-    "start": "node server.mjs"
+    "branch:check": "node scripts/branch-policy.mjs",
+    "build": "node scripts/build.mjs",
+    "check": "npm run format:check && npm run lint && npm test && npm run build",
+    "clean": "node scripts/clean.mjs",
+    "dev": "node scripts/dev.mjs",
+    "format:check": "node scripts/format-check.mjs",
+    "lint": "node scripts/validate.mjs",
+    "package": "node scripts/package.mjs",
+    "preview": "npm run build && npm run serve",
+    "qa:visual": "python3 scripts/compose-qa.py",
+    "release:dry-run": "npm run check && node scripts/release-guard.mjs --allow-non-main && npm pack --dry-run",
+    "release:guard": "node scripts/release-guard.mjs",
+    "release:merge-guard": "node scripts/merge-guard.mjs",
+    "release:package": "npm run check && npm run release:guard && npm run package",
+    "release:plan": "node scripts/release-plan.mjs",
+    "serve": "node scripts/serve.mjs --root dist",
+    "start": "npm run dev",
+    "test": "node --test",
+    "version:major": "npm version major --no-git-tag-version",
+    "version:minor": "npm version minor --no-git-tag-version",
+    "version:patch": "npm version patch --no-git-tag-version"
   }
 }
