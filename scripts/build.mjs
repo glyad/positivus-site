@@ -2,6 +2,8 @@ import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { authNavigation, authPages, authText } from "../sources/js/auth-content.mjs";
+
 const scriptPath = fileURLToPath(import.meta.url);
 export const repositoryRoot = resolve(dirname(scriptPath), "..");
 
@@ -10,6 +12,10 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
   const outputDir = resolve(rootDir, "dist");
   const packageMetadata = JSON.parse(
     await readFile(resolve(rootDir, "package.json"), "utf8")
+  );
+  const authTemplate = await readFile(
+    resolve(sourceDir, "auth-template.html"),
+    "utf8"
   );
 
   await rm(outputDir, { force: true, recursive: true });
@@ -25,6 +31,17 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
     cp(resolve(sourceDir, "index.html"), resolve(outputDir, "index.html")),
   ]);
 
+  await Promise.all(
+    authPages.map((page) => {
+      const html = authTemplate
+        .replaceAll("%%TITLE%%", authText[page.titleKey].en)
+        .replaceAll("%%PAGE%%", page.page)
+        .replaceAll("%%AUTH_NAV%%", authNavigation(page.section))
+        .replaceAll("%%CONTENT%%", page.content);
+      return writeFile(resolve(outputDir, page.filename), html);
+    })
+  );
+
   const stylesheet = await readFile(
     resolve(sourceDir, "scss", "main.scss"),
     "utf8"
@@ -38,6 +55,7 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
     name: packageMetadata.name,
     version: packageMetadata.version,
     entrypoint: "index.html",
+    entrypoints: ["index.html", ...authPages.map((page) => page.filename)],
     source: "sources",
   };
 

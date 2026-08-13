@@ -1,6 +1,6 @@
 {
   "name": "positivus-static-site",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Dependency-free bilingual Positivus landing page with English LTR and Hebrew RTL layouts.",
   "private": true,
   "type": "module",
@@ -27,6 +27,7 @@
     "package": "node scripts/package.mjs",
     "preview": "npm run build && npm run serve",
     "qa:visual": "python3 scripts/compose-qa.py",
+    "qa:auth-visual": "python3 scripts/compose-auth-qa.py",
     "release:dry-run": "npm run check && node scripts/release-guard.mjs --allow-non-main && npm pack --dry-run",
     "release:guard": "node scripts/release-guard.mjs",
     "release:merge-guard": "node scripts/merge-guard.mjs",
