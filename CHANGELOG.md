@@ -11,6 +11,10 @@ All notable changes to this project are documented in this file. The format foll
 - Accessible client-side form validation, password guidance, one-time-code entry, loading feedback, focus management, and keyboard-operable controls.
 - Authentication visual-QA evidence, automated route validation, and unit tests for the fake-auth state helpers.
 
+### Changed
+
+- Reordered the landing-page quote and account actions, and simplified the desktop language/sign-in treatment by removing its enclosing capsule.
+
 ## [1.0.0] - 2026-08-09
 
 ### Added

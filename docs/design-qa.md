@@ -6,7 +6,7 @@ The approved Green Gateway v2 authentication system has its own complete source-
 
 ## Header action refinement
 
-The landing-page language, sign-in, and quote controls were refined and rechecked in English LTR, Hebrew RTL, desktop, tight-desktop, and open-mobile-menu states. Focused before/after evidence is stored in `docs/design-qa/header-actions-comparison.jpg` and `docs/design-qa/header-actions-mobile-comparison.jpg`; no actionable P0/P1/P2 issues remain.
+The landing-page quote action now precedes the language/sign-in utilities, and the desktop utility pair no longer has an enclosing border or gray capsule. The controls were rechecked in English LTR, Hebrew RTL, desktop, tight-desktop, and open-mobile-menu states. Focused before/after evidence is stored in `docs/design-qa/header-actions-comparison.jpg` and `docs/design-qa/header-actions-mobile-comparison.jpg`; no actionable P0/P1/P2 issues remain.
 
 ## Comparison Target
 
