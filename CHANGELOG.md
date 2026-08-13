@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-14
+
 ### Added
 
 - Complete UI-only sign-in and account-creation journey with password recovery, email verification, success, failure, social-provider, legal, and demo-dashboard states.
