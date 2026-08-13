@@ -69,6 +69,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md), and [docs/
 
 ## Design documentation
 
+- [Product roadmap](docs/ROADMAP.md)
 - [Extracted UX/UI design system](docs/design-system.md)
 - [Implementation architecture](docs/architecture.md)
 - [Latest visual QA report](docs/design-qa.md)
