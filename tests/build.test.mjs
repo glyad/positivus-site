@@ -10,8 +10,13 @@ test("build creates the deployable static site", async () => {
 
   for (const file of [
     "index.html",
+    "sign-in.html",
+    "sign-up.html",
+    "verify-email.html",
+    "account.html",
     "css/main.css",
     "js/main.js",
+    "js/auth.js",
     "assets/images/decor/contact-illustration.svg",
     "manifest.json",
   ]) {
@@ -24,6 +29,11 @@ test("build creates the deployable static site", async () => {
   const html = await readFile(resolve(outputDir, "index.html"), "utf8");
   assert.match(html, /css\/main\.css/);
   assert.match(html, /js\/main\.js/);
+
+  const authHtml = await readFile(resolve(outputDir, "sign-up.html"), "utf8");
+  assert.match(authHtml, /data-auth-page="sign-up"/);
+  assert.match(authHtml, /autocomplete="new-password"/);
+  assert.doesNotMatch(authHtml, /%%(?:TITLE|PAGE|AUTH_NAV|CONTENT)%%/);
 });
 
 test("build manifest tracks the package version", async () => {
@@ -36,4 +46,6 @@ test("build manifest tracks the package version", async () => {
   );
 
   assert.equal(manifest.version, packageMetadata.version);
+  assert.ok(manifest.entrypoints.includes("sign-in.html"));
+  assert.ok(manifest.entrypoints.includes("privacy.html"));
 });

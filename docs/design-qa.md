@@ -1,5 +1,9 @@
 # Design QA
 
+## Authentication extension
+
+The approved Green Gateway v2 authentication system has its own complete source-to-browser comparison report at [`design-qa.md`](../design-qa.md). The evidence covers English LTR, Hebrew RTL, desktop, mobile, successful journeys, and exceptional states; its final result is passed.
+
 ## Comparison Target
 
 - Source visual truth: `docs/design-qa/reference-mockup.webp`

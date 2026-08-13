@@ -2,7 +2,7 @@
 
 A dependency-free HTML, SCSS/CSS, and vanilla JavaScript recreation of Olga Averchenko's [Positivus Landing Page Design](https://www.figma.com/community/file/1230604708032389430/positivus-landing-page-design).
 
-The site supports English LTR and automatically translated Hebrew RTL layouts. It includes responsive navigation, service cards, an accordion, team reveal, testimonial carousel, validated contact and newsletter forms, and persistent language selection.
+The site supports English LTR and automatically translated Hebrew RTL layouts. It includes responsive navigation, service cards, an accordion, team reveal, testimonial carousel, validated contact and newsletter forms, persistent language selection, and a complete prototype authentication journey with no real accounts or stored personal data.
 
 ## Requirements
 
@@ -39,6 +39,7 @@ Open `http://127.0.0.1:4173/`. The development command builds the site into `dis
 | `npm run release:merge-guard` | Verify that a release commit is a regular two-parent merge. |
 | `npm run release:plan` | Verify that the prepared package version increments the latest release tag. |
 | `npm run qa:visual` | Regenerate visual comparison images when Pillow is installed. |
+| `npm run qa:auth-visual` | Regenerate the authentication visual comparison boards. |
 
 ## Repository structure
 
@@ -71,6 +72,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md), and [docs/
 
 - [Product roadmap](docs/ROADMAP.md)
 - [Extracted UX/UI design system](docs/design-system.md)
+- [Authentication UX/UI specification](docs/authentication.md)
 - [Implementation architecture](docs/architecture.md)
 - [Latest visual QA report](docs/design-qa.md)
 

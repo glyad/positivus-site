@@ -19,6 +19,10 @@ Those assets, the Positivus name, and the original design are not relicensed by 
 
 Space Grotesk is distributed under the SIL Open Font License 1.1. The bundled license is available at `sources/assets/fonts/OFL.txt`.
 
+## Authentication icons
+
+Interface icons used by the authentication prototype come from Bootstrap Icons under the MIT License. Social-provider marks come from Simple Icons under the CC0 1.0 license. The vendored license notices are available alongside the assets in `sources/assets/icons/auth/`.
+
 ## Repository code
 
 Original HTML, CSS/SCSS, JavaScript, build tooling, tests, documentation, and workflow configuration created for this repository are licensed under the repository's MIT License unless a file states otherwise.
