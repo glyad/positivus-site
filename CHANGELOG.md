@@ -4,6 +4,17 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+### Added
+
+- Complete UI-only sign-in and account-creation journey with password recovery, email verification, success, failure, social-provider, legal, and demo-dashboard states.
+- English LTR and Hebrew RTL authentication experiences with persistent language selection and mirrored responsive layouts.
+- Accessible client-side form validation, password guidance, one-time-code entry, loading feedback, focus management, and keyboard-operable controls.
+- Authentication visual-QA evidence, automated route validation, and unit tests for the fake-auth state helpers.
+
+### Changed
+
+- Reordered the landing-page quote and account actions, and simplified the desktop language/sign-in treatment by removing its enclosing capsule.
+
 ## [1.0.0] - 2026-08-09
 
 ### Added

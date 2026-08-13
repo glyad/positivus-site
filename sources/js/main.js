@@ -10,6 +10,7 @@
     "Use Cases": "מקרי בוחן",
     Pricing: "תמחור",
     Blog: "בלוג",
+    "Sign in": "התחברות",
     "Request a quote": "בקשת הצעת מחיר",
     "Navigating the digital landscape for success": "מנווטים בנוף הדיגיטלי להצלחה",
     "Our digital marketing agency helps businesses grow and succeed online through a range of services including SEO, PPC, social media marketing, and content creation.":

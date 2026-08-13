@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A UI-only Positivus authentication demonstration. No account or personal data is stored."
+      data-auth-description
+    />
+    <title>%%TITLE%% — Positivus</title>
+    <link rel="icon" href="assets/icons/star.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="css/main.css" />
+    <script type="module" src="js/auth.js"></script>
+  </head>
+  <body class="auth-page" data-auth-page="%%PAGE%%">
+    <a class="skip-link" href="#main-content" data-i18n="skipToContent">Skip to content</a>
+
+    <div class="auth-layout">
+      <aside class="auth-promo" aria-labelledby="auth-promo-title">
+        <div class="auth-promo__copy">
+          <p class="auth-promo__eyebrow" data-i18n="prototypeUi">Prototype UI</p>
+          <h2 class="auth-promo__title" id="auth-promo-title" data-i18n="greenGateway">
+            Green Gateway
+          </h2>
+          <p class="auth-promo__description" data-i18n="authSystemForPositivus">
+            Authentication system for Positivus
+          </p>
+        </div>
+        <img
+          class="auth-promo__art"
+          src="assets/images/decor/hero-illustration.svg"
+          alt=""
+          width="601"
+          height="515"
+        />
+        <p class="auth-promo__values" data-i18n="secureSimplePositive">Secure • Simple • Positive</p>
+      </aside>
+
+      <div class="auth-surface">
+        <header class="auth-header">
+          <div class="auth-header__primary">
+            <a class="brand" href="index.html" data-i18n-aria-label="positivusHome" aria-label="Positivus home">
+              <span class="brand__mark icon-mask icon-mask--star" aria-hidden="true"></span>
+              <span class="brand__name">Positivus</span>
+            </a>
+            <a class="auth-back" href="index.html">
+              <span class="auth-icon auth-icon--arrow-left" aria-hidden="true"></span>
+              <span data-i18n="backToWebsite">Back to website</span>
+            </a>
+          </div>
+
+          <div class="auth-language" aria-label="Language" data-i18n-aria-label="language">
+            <span class="auth-icon auth-icon--globe" aria-hidden="true"></span>
+            <span data-language-current>English</span>
+            <span class="auth-language__divider" aria-hidden="true"></span>
+            <button class="auth-language__button" type="button" data-language-toggle>עברית</button>
+          </div>
+
+          <button
+            class="auth-menu-toggle"
+            type="button"
+            aria-expanded="false"
+            aria-controls="auth-mobile-menu"
+            aria-label="Open menu"
+            data-i18n-aria-label="openMenu"
+            data-auth-menu-toggle
+          >
+            <span class="icon-mask icon-mask--menu" aria-hidden="true"></span>
+          </button>
+
+          <div class="auth-mobile-menu" id="auth-mobile-menu" hidden data-auth-mobile-menu>
+            <a href="index.html" data-i18n="backToWebsite">Back to website</a>
+            <button type="button" data-language-toggle data-i18n="switchToHebrew">עברית</button>
+          </div>
+        </header>
+
+        <main class="auth-main" id="main-content">
+          %%AUTH_NAV%%
+          %%CONTENT%%
+        </main>
+
+        <footer class="auth-demo-note">
+          <span class="auth-icon auth-icon--shield-check" aria-hidden="true"></span>
+          <span data-i18n="demoAuthentication">Demo authentication — no data is stored</span>
+        </footer>
+      </div>
+    </div>
+  </body>
+</html>

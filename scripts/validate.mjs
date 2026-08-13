@@ -3,6 +3,7 @@ import { dirname, extname, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
 import { repositoryRoot } from "./build.mjs";
+import { authNavigation, authPages, authText } from "../sources/js/auth-content.mjs";
 
 const failures = [];
 const sourceDir = resolve(repositoryRoot, "sources");
@@ -40,6 +41,7 @@ for (const filePath of [
 
 const htmlPath = resolve(sourceDir, "index.html");
 const html = await readFile(htmlPath, "utf8");
+const authFilenames = new Set(authPages.map((page) => page.filename));
 const references = [...html.matchAll(/(?:href|src)="([^"]+)"/g)].map(
   (match) => match[1]
 );
@@ -53,6 +55,7 @@ for (const reference of references) {
   }
 
   const cleanReference = reference.split(/[?#]/, 1)[0];
+  if (authFilenames.has(cleanReference)) continue;
   const expectedPath =
     cleanReference === "css/main.css"
       ? resolve(sourceDir, "scss", "main.scss")
@@ -67,6 +70,106 @@ for (const reference of references) {
 
 if (/(?:href|src)="https?:\/\/[^"]+\.(?:css|js)(?:[?#][^"]*)?"/.test(html)) {
   failures.push("sources/index.html: third-party runtime CSS or JavaScript detected");
+}
+
+const authTemplate = await readFile(resolve(sourceDir, "auth-template.html"), "utf8");
+const authDocuments = authPages.map((page) => ({
+  label: `generated ${page.filename}`,
+  html: authTemplate
+    .replaceAll("%%TITLE%%", authText[page.titleKey].en)
+    .replaceAll("%%PAGE%%", page.page)
+    .replaceAll("%%AUTH_NAV%%", authNavigation(page.section))
+    .replaceAll("%%CONTENT%%", page.content)
+}));
+
+for (const document of authDocuments) {
+  const authReferences = [
+    ...document.html.matchAll(/(?:href|src)="([^"]+)"/g)
+  ].map((match) => match[1]);
+
+  for (const reference of authReferences) {
+    if (reference.startsWith("#") || /^(?:https?:|mailto:|tel:)/.test(reference)) {
+      continue;
+    }
+
+    const cleanReference = reference.split(/[?#]/, 1)[0];
+    if (cleanReference.endsWith(".html")) {
+      if (cleanReference === "index.html" || authFilenames.has(cleanReference)) continue;
+      failures.push(`${document.label}: missing page reference ${reference}`);
+      continue;
+    }
+
+    const expectedPath =
+      cleanReference === "css/main.css"
+        ? resolve(sourceDir, "scss", "main.scss")
+        : resolve(sourceDir, cleanReference);
+
+    try {
+      await readFile(expectedPath);
+    } catch {
+      failures.push(`${document.label}: missing local reference ${reference}`);
+    }
+  }
+
+  if (/(?:href|src)="https?:\/\/[^\"]+\.(?:css|js)(?:[?#][^\"]*)?"/.test(document.html)) {
+    failures.push(`${document.label}: third-party runtime CSS or JavaScript detected`);
+  }
+}
+
+const expectedAuthPages = [
+  "account.html",
+  "auth-success.html",
+  "check-email.html",
+  "forgot-password.html",
+  "invalid-link.html",
+  "password-updated.html",
+  "privacy.html",
+  "reset-password.html",
+  "sign-in.html",
+  "sign-up.html",
+  "social-auth.html",
+  "terms.html",
+  "verify-email.html"
+];
+
+if (JSON.stringify([...authFilenames].sort()) !== JSON.stringify(expectedAuthPages)) {
+  failures.push("authentication: generated page inventory is incomplete");
+}
+
+if (new Set(authPages.map((page) => page.page)).size !== authPages.length) {
+  failures.push("authentication: duplicate page identifiers detected");
+}
+
+const authMarkup = [authTemplate, ...authPages.map((page) => page.content)].join("\n");
+const translationKeys = [
+  ...authMarkup.matchAll(/data-i18n(?:-placeholder|-aria-label)?="([^"]+)"/g)
+].map((match) => match[1]);
+
+for (const key of new Set(translationKeys)) {
+  if (!authText[key]?.en || !authText[key]?.he) {
+    failures.push(`authentication: missing complete translation for ${key}`);
+  }
+}
+
+for (const placeholder of ["%%TITLE%%", "%%PAGE%%", "%%AUTH_NAV%%", "%%CONTENT%%"]) {
+  if (authDocuments.some((document) => document.html.includes(placeholder))) {
+    failures.push(`authentication: unresolved template placeholder ${placeholder}`);
+  }
+}
+
+const authScript = await readFile(resolve(sourceDir, "js", "auth.js"), "utf8");
+const storageWrites = authScript.match(/localStorage\.setItem\(/g) ?? [];
+if (
+  storageWrites.length !== 1 ||
+  !authScript.includes('localStorage.setItem("positivus-language"')
+) {
+  failures.push("authentication: only the language preference may be stored");
+}
+
+for (const autocomplete of ["one-time-code", "current-password", "new-password"]) {
+  if (!authMarkup.includes(`autocomplete="${autocomplete}"`)) {
+    failures.push(`authentication: ${autocomplete} autocomplete is missing`);
+  }
 }
 
 const stylesheet = await readFile(

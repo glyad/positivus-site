@@ -2,22 +2,26 @@
 
 ## Runtime
 
-Positivus is a static site. The browser receives one HTML document, one generated CSS file, one vanilla JavaScript file, and local assets. There are no client-side package dependencies, backend services, cookies, or network API calls.
+Positivus is a static site. The browser receives generated HTML documents, one generated CSS file, vanilla JavaScript modules, and local assets. There are no client-side package dependencies, backend services, cookies, or network API calls.
 
 ## Source and build flow
 
 ```text
 sources/index.html ──────────────┐
+sources/auth-template.html ──────┤
+sources/js/auth-content.mjs ─────┤
 sources/scss/main.scss ──────────┼─ scripts/build.mjs ─ dist/
-sources/js/main.js ──────────────┤
+sources/js/ ─────────────────────┤
 sources/assets/ ─────────────────┘
 ```
 
-The stylesheet is CSS-compatible SCSS. The build adds a generated-file banner and copies it to `dist/css/main.css`. JavaScript, HTML, and assets are copied without transformation. `dist/manifest.json` records the package version for package and release inspection.
+The stylesheet is CSS-compatible SCSS. The build adds a generated-file banner and copies it to `dist/css/main.css`. It copies the landing page, JavaScript, and assets without transformation, then renders the authentication route definitions into individual HTML pages from the shared template. `dist/manifest.json` records the package version and every generated entry point for package and release inspection.
 
 ## Internationalization
 
 English strings remain in the authored HTML. `sources/js/main.js` contains the Hebrew translation dictionary and updates visible, dynamic, validation, status, metadata, and accessible text. The language switch changes `lang` and `dir` on the root element and saves the chosen locale in browser storage.
+
+Authentication copy and route definitions live in `sources/js/auth-content.mjs`. `sources/js/auth.js` applies the selected language, fake-auth transitions, validation, and accessible status updates consistently across all authentication pages. Only the locale preference is stored; entered names, email addresses, passwords, and verification codes are never persisted.
 
 Layout uses logical CSS properties where possible. Directional controls and the asymmetric contact decoration have explicit RTL transforms; brand and hero artwork retain their intended orientation.
 
