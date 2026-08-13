@@ -80,4 +80,42 @@ The comparison boards were generated from the approved visual and browser captur
 - All 13 generated authentication routes, local assets, template resolution, and entry-point manifest records.
 - Browser console errors/warnings: none.
 
+## Landing header action refinement
+
+### Comparison target
+
+- Source current-state crop: `docs/design-qa/header-actions-reference.png` at 846 × 240 pixels.
+- Implementation: `http://127.0.0.1:4173/index.html`.
+- Desktop evidence: `docs/design-qa/header-actions-desktop-en.jpg` and `docs/design-qa/header-actions-desktop-he.jpg`, captured from a 1600 × 900 CSS viewport. The in-app capture files are 1976 × 1125 pixels because the browser viewport override reports DPR 0.8; the focused action regions were cropped using CSS-aligned coordinates before comparison.
+- Mobile evidence: `docs/design-qa/header-actions-mobile-en.jpg` and `docs/design-qa/header-actions-mobile-he.jpg`, captured from a 390 × 844 CSS viewport as 488 × 1054 pixel files at DPR 0.8 and normalized in the comparison board.
+- States: English LTR and Hebrew RTL; desktop navigation visible; mobile navigation open with the menu control focus-visible.
+
+### Combined evidence
+
+- Before/English/Hebrew focused comparison: `docs/design-qa/header-actions-comparison.jpg`.
+- English/Hebrew mobile comparison: `docs/design-qa/header-actions-mobile-comparison.jpg`.
+
+The combined focused input confirms that the previous mixed treatment—standalone lime language button, underlined account link, and substantially taller quote button—has been replaced by a coherent utility pair beside a distinct conversion action. The two related utilities now share one gray outlined container, matching inset radii and equal height; the quote CTA uses the same 60px desktop rhythm while remaining separate and visually dominant.
+
+### Findings
+
+- No actionable P0, P1, or P2 issues remain in the refined header region.
+- Fonts and typography: Space Grotesk, weight hierarchy, line height, and label scale remain consistent with the landing-page navigation. The account action now reads as a control rather than an underlined inline link.
+- Spacing and layout rhythm: desktop controls share a 60px outer height, 4px inset rhythm, 12–18px radii, and balanced gaps. The tight 1120px desktop breakpoint keeps positive space between the wordmark and navigation without overflow. Mobile utilities use equal columns above the full-width CTA.
+- Colors and tokens: existing lime, gray, white, near-black, border, focus, and transition tokens are reused; no new palette or elevation language was introduced.
+- Image and asset quality: this region contains no image assets. The existing Positivus brand asset remains unchanged and unmirrored.
+- Copy and content: English and Hebrew labels and routes remain unchanged. The target-language control stays recognizable, while the account and quote actions translate with the rest of the landing page.
+- Responsiveness and RTL: desktop and mobile layouts have no root overflow. Hebrew reverses the action order and alignment naturally, while the account pair remains semantically grouped and the brand lockup preserves LTR orientation.
+- Accessibility: language, sign-in, and quote remain native interactive elements with 48px-or-larger targets. Focus-visible treatment remains clearly visible, hover/active feedback is retained, and the mobile menu remains keyboard dismissible.
+
+### Comparison history
+
+1. The supplied current-state crop identified a P2 hierarchy and consistency issue: three adjacent actions used three unrelated heights and affordances, and the underlined sign-in link appeared visually accidental.
+   - Fix: grouped language and sign-in as related utilities with equal inset controls, removed the persistent text underline, and normalized the desktop quote CTA to the same 60px outer rhythm.
+   - Post-fix evidence: `docs/design-qa/header-actions-comparison.jpg` shows the calmer English and mirrored Hebrew clusters.
+2. Tight-breakpoint review found a P2 density issue at the 1120px desktop threshold: the new group left too little space between the wordmark and first navigation item.
+   - Fix: reduced intermediate navigation gaps, label size, and horizontal control padding only between 1120px and 1290px.
+   - Post-fix evidence: the 1120 × 900 browser check reports no overflow or overlap and retains a positive brand-to-navigation gap.
+3. Mobile review found no remaining P0/P1/P2 issues after the controls were placed in equal columns above the full-width quote CTA. Focus-visible, English, Hebrew, and RTL states remain legible and balanced.
+
 final result: passed
