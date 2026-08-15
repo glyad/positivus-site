@@ -32,7 +32,7 @@ required checks and reached `main` through the regular release flow.
 - Static build, validation, packaging, CI, CodeQL, Dependabot, and tagged GitHub
   Release automation.
 
-## In design: authentication UI
+## Released: authentication UI — `v1.1.0`
 
 Build a frontend-only authentication journey based on the approved **Green
 Gateway** direction. The feature will use separate pages, deterministic fake
@@ -117,6 +117,61 @@ storage.
 - Automated checks cover routing, validation, localization completeness,
   direction changes, and build output.
 - Visual QA covers desktop and mobile success and error paths in both directions.
+
+## Planned: multilingual blog — `v1.2.0`
+
+Build a CMS-driven, read-only editorial knowledge hub for business owners,
+marketing leads, practitioners, and specialists. The public article content is
+static and dependency-free; a clearly labelled comment composer remains a
+non-persistent UI prototype until production authentication and community
+safeguards exist.
+
+### Information architecture
+
+- Blog home with editorial hero, blog-only search, topic navigation, featured
+  guide, latest insights, author discovery, tag cloud, and newsletter CTA.
+- Browse and search results with shareable filters and numbered pagination.
+- Category, tag, series, authors directory, author profile, and article pages.
+- Separate global site search and blog-only search experiences.
+
+### Content and discovery
+
+- One stable primary category, multiple governed tags, audience, level, format,
+  author, optional co-authors and reviewer, series, publication date, and
+  last-edited date.
+- Seven initial categories: Strategy & Growth, SEO, Paid Media, Content &
+  Creative, Social Media, Email & Lifecycle, and Analytics & Optimization.
+- Accessible tag cloud with exact article counts and an alphabetical view.
+- Structured article blocks for summaries, rich text, figures, quotations,
+  statistics, checklists, steps, tables, media, downloads, citations, FAQs, and
+  contextual consultation prompts.
+- Editorial and automatic related-content rules, RSS feeds, sitemaps, canonical
+  URLs, `hreflang`, social metadata, and structured data.
+
+### CMS and delivery
+
+- Keep the CMS provider replaceable through a validated content adapter.
+- Generate static localized pages and separate global and blog search indexes at
+  build time; never expose CMS credentials to the browser.
+- Trigger validated deployments from CMS publishing events while leaving the
+  existing production build online after invalid content or a failed build.
+- Support draft, scheduled, published, preview, redirects, and explicit missing-
+  translation behavior.
+
+### Interaction and quality
+
+- Responsive English LTR and Hebrew RTL layouts, accessible filters, search,
+  dialogs, tag cloud, pagination, article navigation, and content blocks.
+- Newsletter signup as the primary recurring conversion and one contextual
+  consultation prompt on high-intent articles.
+- Registered-user comment presentation as a transparent UI-only prototype; no
+  public storage, real accounts, replies, reactions, moderation, reporting,
+  deletion, spam controls, or comment-specific localization in `v1.2.0`.
+- Automated coverage for content validation, routes, localization, search,
+  filters, pagination, metadata, accessibility guards, and deterministic builds.
+
+The approved design is specified in
+[`docs/superpowers/specs/2026-08-15-blog-v1.2.0-design.md`](superpowers/specs/2026-08-15-blog-v1.2.0-design.md).
 
 ## Planned: site-wide accessibility baseline
 

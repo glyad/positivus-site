@@ -73,6 +73,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md), [RELEASING.md](RELEASING.md), and [docs/
 - [Product roadmap](docs/ROADMAP.md)
 - [Extracted UX/UI design system](docs/design-system.md)
 - [Authentication UX/UI specification](docs/authentication.md)
+- [Blog v1.2.0 UX/UI and content-system specification](docs/superpowers/specs/2026-08-15-blog-v1.2.0-design.md)
 - [Implementation architecture](docs/architecture.md)
 - [Latest visual QA report](docs/design-qa.md)
 
