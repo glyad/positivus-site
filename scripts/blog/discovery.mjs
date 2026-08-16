@@ -68,6 +68,7 @@ export function createGlobalSearchIndex({ model, siteDocuments, locale }) {
       summary: stripMarkup(content.summary),
       href: content.href,
       keywords: Array.isArray(document.keywords) ? document.keywords.map(stripMarkup) : [],
+      ...(document.featured === true ? { featured: true } : {}),
       ...(Number.isFinite(document.groupOrder) ? { groupOrder: document.groupOrder } : {})
     }] : [];
   });

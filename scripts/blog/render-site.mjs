@@ -10,6 +10,7 @@ import {
   renderBrowsePage,
   renderCategoryPage,
   renderMissingTranslationPage,
+  renderSiteSearchFallbackPage,
   renderSeriesPage,
   renderTagIndexPage,
   renderTagPage
@@ -25,6 +26,7 @@ function byLocalizedName(locale) {
 function emitPages(model, template, version) {
   const pages = [];
   for (const locale of LOCALES) {
+    pages.push(renderSiteSearchFallbackPage({ model, template, locale }));
     pages.push(renderBlogHome({ model, template, locale, version }));
     pages.push(renderBrowsePage({ model, template, locale }));
     pages.push(renderTagIndexPage({ model, template, locale }));

@@ -12,6 +12,9 @@
     Blog: "בלוג",
     "Sign in": "התחברות",
     "Request a quote": "בקשת הצעת מחיר",
+    "Search Positivus": "חיפוש בפוזיטיבוס",
+    "Search the Positivus site": "חיפוש באתר פוזיטיבוס",
+    "Close search": "סגירת החיפוש",
     "Navigating the digital landscape for success": "מנווטים בנוף הדיגיטלי להצלחה",
     "Our digital marketing agency helps businesses grow and succeed online through a range of services including SEO, PPC, social media marketing, and content creation.":
       "הסוכנות שלנו לשיווק דיגיטלי עוזרת לעסקים לצמוח ולהצליח אונליין באמצעות מגוון שירותים, בהם SEO, PPC, שיווק ברשתות חברתיות ויצירת תוכן.",
@@ -131,6 +134,7 @@
       "Close navigation": "סגירת הניווט",
       "Dismiss navigation overlay": "סגירת שכבת הניווט",
       "Primary navigation": "ניווט ראשי",
+      "Search Positivus": "חיפוש בפוזיטיבוס",
       "Companies we have worked with": "חברות שעבדנו איתן",
       "Case studies": "מקרי בוחן",
       "Choose testimonial": "בחירת המלצה",

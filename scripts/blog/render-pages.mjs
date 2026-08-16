@@ -23,7 +23,8 @@ const copy = {
     home: "Knowledge Hub", category: "Category", tag: "Topic", author: "Author", searchPlaceholder: "Search titles, topics, and authors",
     tagIndex: "All topics", backToTagIndex: "Browse all topics", relatedCategories: "Related categories", formats: "Formats", levels: "Levels", apply: "Apply",
     featuredInCategory: "Featured in this category", remainingInCategory: "More in this category", articles: "Articles", guides: "Guides", seriesCount: "Series",
-    empty: "New insights are on the way", emptyBody: "Search the blog or browse our topics while we prepare the next practical guide."
+    empty: "New insights are on the way", emptyBody: "Search the blog or browse our topics while we prepare the next practical guide.",
+    siteSearch: "Search Positivus", siteSearchBody: "Browse our services, case studies, and practical marketing guides.", services: "Services", useCases: "Case studies"
   },
   he: {
     latest: "תובנות אחרונות", featured: "מדריך נבחר", evergreen: "למידה מתמשכת",
@@ -44,7 +45,8 @@ const copy = {
     home: "מרכז הידע", category: "קטגוריה", tag: "נושא", author: "כותב", searchPlaceholder: "חיפוש בכותרות, נושאים וכותבים",
     tagIndex: "כל הנושאים", backToTagIndex: "לכל הנושאים", relatedCategories: "קטגוריות קשורות", formats: "פורמטים", levels: "רמות", apply: "החלה",
     featuredInCategory: "נבחר בקטגוריה", remainingInCategory: "עוד בקטגוריה", articles: "מאמרים", guides: "מדריכים", seriesCount: "סדרות",
-    empty: "תובנות חדשות בדרך", emptyBody: "חפשו בבלוג או עיינו בנושאים שלנו בזמן שאנחנו מכינים את המדריך המעשי הבא."
+    empty: "תובנות חדשות בדרך", emptyBody: "חפשו בבלוג או עיינו בנושאים שלנו בזמן שאנחנו מכינים את המדריך המעשי הבא.",
+    siteSearch: "חיפוש בפוזיטיבוס", siteSearchBody: "עיינו בשירותים שלנו, במקרי הבוחן ובמדריכי השיווק המעשיים.", services: "שירותים", useCases: "מקרי בוחן"
   }
 };
 
@@ -399,6 +401,17 @@ export function renderSearchFallbackPage({ model, template, locale, outputPath =
   const ui = copy[locale];
   const mainHtml = `<section class="shell" data-blog-search-fallback><h1 id="page-title">${text(ui.noResults)}</h1><p>${text(ui.noResultsBody)}</p>${renderSearch({ locale, outputPath })}</section>`;
   return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "browse" }), title: ui.noResults, description: ui.noResultsBody, mainHtml, robots: "noindex, follow" });
+}
+
+/** Render a no-script entry point for the shared site search. */
+export function renderSiteSearchFallbackPage({ model, template, locale, outputPath = locale === "he" ? "he/search/index.html" : "search/index.html" }) {
+  const ui = copy[locale];
+  const services = href(outputPath, "index.html#services");
+  const cases = href(outputPath, "index.html#use-cases");
+  const blog = href(outputPath, blogRoute({ locale, kind: "home" }));
+  const mainHtml = `<section class="shell" data-site-search-fallback><h1 id="page-title">${text(ui.siteSearch)}</h1><p>${text(ui.siteSearchBody)}</p><form action="${escapeAttribute(href(outputPath, outputPath))}" method="get" role="search"><label for="site-search-fallback-input">${text(ui.siteSearch)}</label><input id="site-search-fallback-input" name="q" type="search" /><button type="submit">${text(ui.siteSearch)}</button></form><nav aria-label="${text(ui.siteSearch)}"><ul><li><a href="${escapeAttribute(services)}">${text(ui.services)}</a></li><li><a href="${escapeAttribute(cases)}">${text(ui.useCases)}</a></li><li><a href="${escapeAttribute(blog)}">${text(ui.browse)}</a></li></ul></nav></section>`;
+  const alternateOutputPath = locale === "he" ? "search/index.html" : "he/search/index.html";
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath, title: ui.siteSearch, description: ui.siteSearchBody, mainHtml, bodyClass: "blog-page site-search-page", robots: "noindex, follow" });
 }
 
 export function renderMissingTranslationPage({ model, template, article, outputPath }) {

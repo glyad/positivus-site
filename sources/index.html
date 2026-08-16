@@ -11,6 +11,7 @@
     <link rel="icon" href="assets/icons/star.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="css/main.css" />
     <script src="js/main.js" defer></script>
+    <script type="module" src="js/site-search.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -39,8 +40,9 @@
             <li><a href="#services">Services</a></li>
             <li><a href="#use-cases">Use Cases</a></li>
             <li><a href="#pricing">Pricing</a></li>
-            <li><a href="#blog">Blog</a></li>
+            <li><a href="blog/index.html">Blog</a></li>
           </ul>
+          <a class="site-search-trigger" href="search/index.html" data-site-search-open aria-label="Search Positivus">Search Positivus</a>
           <a class="button button--outline site-nav__cta" href="#contact">Request a quote</a>
           <div class="site-nav__account">
             <button
@@ -57,6 +59,25 @@
         </nav>
       </div>
       <button class="nav-backdrop" type="button" aria-label="Dismiss navigation overlay" data-nav-backdrop></button>
+      <dialog
+        data-site-search-dialog
+        data-site-search-index="search-index-en.json"
+        data-site-search-index-en="search-index-en.json"
+        data-site-search-index-he="search-index-he.json"
+        data-site-search-fallback-en="search/index.html"
+        data-site-search-fallback-he="he/search/index.html"
+        aria-labelledby="site-search-title"
+      >
+        <form method="dialog"><button type="submit" aria-label="Close search">×</button></form>
+        <h2 id="site-search-title">Search Positivus</h2>
+        <form action="search/index.html" method="get" role="search">
+          <label for="site-search-input">Search the Positivus site</label>
+          <input id="site-search-input" name="q" type="search" data-site-search-input />
+          <button type="submit">Search Positivus</button>
+        </form>
+        <div data-site-search-status aria-live="polite"></div>
+        <div data-site-search-results></div>
+      </dialog>
     </header>
 
     <main id="main-content">
@@ -635,7 +656,7 @@
               <li><a href="#services">Services</a></li>
               <li><a href="#use-cases">Use Cases</a></li>
               <li><a href="#pricing">Pricing</a></li>
-              <li><a href="#blog">Blog</a></li>
+              <li><a href="blog/index.html">Blog</a></li>
             </ul>
           </nav>
           <div class="social-list" aria-label="Social media">

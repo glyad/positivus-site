@@ -90,6 +90,11 @@ function renderHeader({ locale, outputPath, alternatePath }) {
   const home = linkTo(outputPath, "index.html");
   const blog = linkTo(outputPath, locale === "he" ? "he/blog/index.html" : "blog/index.html");
   const search = linkTo(outputPath, locale === "he" ? "he/search/index.html" : "search/index.html");
+  const searchIndex = linkTo(outputPath, `search-index-${locale}.json`);
+  const searchIndexEn = linkTo(outputPath, "search-index-en.json");
+  const searchIndexHe = linkTo(outputPath, "search-index-he.json");
+  const searchFallbackEn = linkTo(outputPath, "search/index.html");
+  const searchFallbackHe = linkTo(outputPath, "he/search/index.html");
   const signIn = linkTo(outputPath, "sign-in.html");
   const peer = alternatePath === null ? null : linkTo(outputPath, `${safeCanonicalPath(alternatePath, "alternatePath")}index.html`);
   const label = locale === "he" ? "English" : "עברית";
@@ -111,10 +116,10 @@ function renderHeader({ locale, outputPath, alternatePath }) {
       ${peer ? `<a class="language-toggle" href="${escapeAttribute(peer)}" lang="${locale === "he" ? "en" : "he"}">${escapeHtml(label)}</a>` : ""}
     </nav>
   </div>
-  <dialog data-site-search-dialog aria-labelledby="site-search-title">
+  <dialog data-site-search-dialog data-site-search-index="${escapeAttribute(searchIndex)}" data-site-search-index-en="${escapeAttribute(searchIndexEn)}" data-site-search-index-he="${escapeAttribute(searchIndexHe)}" data-site-search-fallback-en="${escapeAttribute(searchFallbackEn)}" data-site-search-fallback-he="${escapeAttribute(searchFallbackHe)}" aria-labelledby="site-search-title">
     <form method="dialog"><button type="submit" aria-label="${escapeAttribute(text.close)}">×</button></form>
     <h2 id="site-search-title">${escapeHtml(text.searchTitle)}</h2>
-    <form action="${escapeAttribute(search)}" role="search"><label for="site-search-input">${escapeHtml(text.searchLabel)}</label><input id="site-search-input" name="q" type="search" data-site-search-input /><button type="submit">${escapeHtml(text.search)}</button></form>
+    <form action="${escapeAttribute(search)}" method="get" role="search"><label for="site-search-input">${escapeHtml(text.searchLabel)}</label><input id="site-search-input" name="q" type="search" data-site-search-input /><button type="submit">${escapeHtml(text.search)}</button></form>
     <div data-site-search-status aria-live="polite"></div><div data-site-search-results></div>
   </dialog>
 </header>`;

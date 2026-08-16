@@ -18,9 +18,13 @@ test("build creates the deployable static site", async () => {
     "css/blog.css",
     "js/main.js",
     "js/auth.js",
+    "js/site-search.js",
+    "js/site-search-core.mjs",
     "assets/images/decor/contact-illustration.svg",
     "blog/index.html",
     "he/blog/index.html",
+    "search/index.html",
+    "he/search/index.html",
     "manifest.json",
   ]) {
     assert.equal((await stat(resolve(outputDir, file))).isFile(), true);
@@ -32,6 +36,11 @@ test("build creates the deployable static site", async () => {
   const html = await readFile(resolve(outputDir, "index.html"), "utf8");
   assert.match(html, /css\/main\.css/);
   assert.match(html, /js\/main\.js/);
+  assert.match(html, /href="blog\/index\.html">Blog<\/a>/);
+  assert.match(html, /href="search\/index\.html" data-site-search-open/);
+  assert.match(html, /data-site-search-dialog/);
+  assert.match(html, /data-site-search-index="search-index-en\.json"/);
+  assert.match(html, /Request a quote/);
 
   const authHtml = await readFile(resolve(outputDir, "sign-up.html"), "utf8");
   assert.match(authHtml, /data-auth-page="sign-up"/);
@@ -42,7 +51,14 @@ test("build creates the deployable static site", async () => {
   assert.match(blogHtml, /lang="he" dir="rtl"/);
   assert.match(blogHtml, /href="\.\.\/\.\.\/css\/blog\.css"/);
   assert.match(blogHtml, /<form action="search\/index\.html" method="get" role="search"/);
+  assert.match(blogHtml, /data-site-search-dialog/);
+  assert.match(blogHtml, /data-site-search-index="\.\.\/\.\.\/search-index-he\.json"/);
+  assert.match(blogHtml, /Request a quote|בקשת הצעת מחיר/);
   assert.doesNotMatch(blogHtml, /%%/);
+
+  const fallbackHtml = await readFile(resolve(outputDir, "search/index.html"), "utf8");
+  assert.match(fallbackHtml, /data-site-search-fallback/);
+  assert.match(fallbackHtml, /action="index\.html" method="get" role="search"/);
 });
 
 test("build manifest tracks the package version", async () => {

@@ -369,6 +369,90 @@ ul {
   width: 100%;
 }
 
+.site-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 10px 16px;
+  border: 1px solid var(--black);
+  border-radius: var(--radius-control);
+  background: var(--green);
+  color: var(--black);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+[data-site-search-dialog] {
+  width: min(100% - 32px, 960px);
+  max-height: min(100% - 32px, 760px);
+  padding: 28px;
+  border: 2px solid var(--black);
+  border-radius: 28px;
+  color: var(--black);
+  background: var(--white);
+}
+
+[data-site-search-dialog]::backdrop {
+  background: rgb(25 26 35 / 72%);
+}
+
+[data-site-search-dialog] > form[method="dialog"] {
+  display: flex;
+  justify-content: end;
+}
+
+[data-site-search-dialog] button {
+  cursor: pointer;
+}
+
+[data-site-search-dialog] input {
+  width: 100%;
+  min-height: 48px;
+  padding: 10px 14px;
+  border: 1px solid var(--black);
+  border-radius: var(--radius-small);
+}
+
+[data-site-search-dialog] [role="search"] {
+  display: grid;
+  gap: 10px;
+}
+
+[data-site-search-status] {
+  min-height: 1.5em;
+  margin-top: 18px;
+  font-weight: 600;
+}
+
+[data-site-search-results] section + section {
+  margin-top: 22px;
+}
+
+[data-site-search-results] h3 {
+  margin-bottom: 8px;
+}
+
+[data-site-search-results] ul {
+  display: grid;
+  gap: 8px;
+}
+
+[data-site-search-results] a {
+  display: grid;
+  gap: 2px;
+  padding: 12px;
+  border-radius: var(--radius-small);
+  background: var(--grey);
+  text-decoration: none;
+}
+
+[data-site-search-results] a:focus-visible,
+.site-search-trigger:focus-visible {
+  outline: 3px solid var(--black);
+  outline-offset: 3px;
+}
+
 .site-nav__account {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1449,6 +1533,13 @@ html[dir="rtl"] .carousel-button--next .icon-mask {
     font-size: 18px;
   }
 
+  .site-search-trigger {
+    min-height: 44px;
+    padding: 8px 12px;
+    font-size: 15px;
+    white-space: nowrap;
+  }
+
   .site-nav__account {
     display: inline-flex;
     gap: 8px;
@@ -1893,6 +1984,18 @@ html[dir="rtl"] .carousel-button--next .icon-mask {
 
   .site-footer__bottom a {
     text-decoration: underline;
+  }
+}
+
+@media (max-width: 640px) {
+  [data-site-search-dialog] {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    border: 0;
+    border-radius: 0;
   }
 }
 

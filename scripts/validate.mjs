@@ -42,6 +42,7 @@ for (const filePath of [
 const htmlPath = resolve(sourceDir, "index.html");
 const html = await readFile(htmlPath, "utf8");
 const authFilenames = new Set(authPages.map((page) => page.filename));
+const generatedFilenames = new Set(["blog/index.html", "search/index.html", "he/search/index.html"]);
 const references = [...html.matchAll(/(?:href|src)="([^"]+)"/g)].map(
   (match) => match[1]
 );
@@ -56,6 +57,7 @@ for (const reference of references) {
 
   const cleanReference = reference.split(/[?#]/, 1)[0];
   if (authFilenames.has(cleanReference)) continue;
+  if (generatedFilenames.has(cleanReference)) continue;
   const expectedPath =
     cleanReference === "css/main.css"
       ? resolve(sourceDir, "scss", "main.scss")
