@@ -90,6 +90,51 @@ function isSafeLink(value) {
   }
 }
 
+function isCanonicalHttpsLink(value) {
+  if (typeof value !== "string" || !value.trim() || value.trim() !== value || /[\u0000-\u001F\u007F]/u.test(value)) return false;
+  try {
+    const link = new URL(value);
+    return link.protocol === "https:" && !link.username && !link.password && link.href === value;
+  } catch {
+    return false;
+  }
+}
+
+function validateProfessionalLinks(author, collector) {
+  if (author.professionalLinks === undefined) return;
+  if (!Array.isArray(author.professionalLinks)) {
+    collector.add(author.id, "record", "professionalLinks", "must be an array of professional links");
+    return;
+  }
+
+  author.professionalLinks.forEach((link, index) => {
+    const field = `professionalLinks[${index}]`;
+    if (!isObject(link)) {
+      collector.add(author.id, "record", field, "must be an object");
+      return;
+    }
+
+    if (typeof link.label === "string") {
+      if (!link.label.trim()) collector.add(author.id, "record", `${field}.label`, "must be a non-empty string");
+    } else if (isObject(link.label)) {
+      for (const locale of author.availableLocales) {
+        if (typeof link.label[locale] !== "string" || !link.label[locale].trim()) {
+          collector.add(author.id, locale, `${field}.label.${locale}`, "must be a non-empty string");
+        }
+      }
+      for (const locale of Object.keys(link.label)) {
+        if (!LOCALES.includes(locale)) collector.add(author.id, locale, `${field}.label`, "uses an unsupported locale");
+      }
+    } else {
+      collector.add(author.id, "record", `${field}.label`, "must be a non-empty string or localized object");
+    }
+
+    if (!isCanonicalHttpsLink(link.href)) {
+      collector.add(author.id, "record", `${field}.href`, "must be a canonical HTTPS link without credentials or control characters");
+    }
+  });
+}
+
 function validateLinkFields(value, id, locale, field, collector) {
   if (Array.isArray(value)) {
     value.forEach((entry, index) => validateLinkFields(entry, id, locale, `${field}[${index}]`, collector));
@@ -334,6 +379,7 @@ function validateCollectionRecords(raw, indexes, collector) {
   for (const author of indexes.author.values()) {
     author.availableLocales = validateLocales(author, author.id, collector, ["name", "slug", "bio"]);
     if (!isSafeAssetPath(author.portrait)) collector.add(author.id, "record", "portrait", "must be a safe local asset path");
+    validateProfessionalLinks(author, collector);
   }
   for (const series of indexes.series.values()) {
     series.availableLocales = validateLocales(series, series.id, collector, ["title", "slug"]);

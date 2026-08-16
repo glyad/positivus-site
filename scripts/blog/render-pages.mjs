@@ -115,6 +115,27 @@ function expertiseLabel(model, value, locale) {
   return localized(record, locale)?.name ?? dimension(value, locale);
 }
 
+function professionalLinkLabel(link, locale) {
+  return typeof link?.label === "string" ? link.label : link?.label?.[locale];
+}
+
+function isRenderableProfessionalLink(link, locale) {
+  const label = professionalLinkLabel(link, locale);
+  if (typeof label !== "string" || !label.trim() || typeof link?.href !== "string" || /[\u0000-\u001F\u007F]/u.test(link.href)) return false;
+  try {
+    const target = new URL(link.href);
+    return target.protocol === "https:" && !target.username && !target.password && target.href === link.href;
+  } catch {
+    return false;
+  }
+}
+
+function renderProfessionalLinks({ author, locale }) {
+  const links = (author.professionalLinks ?? []).filter((link) => isRenderableProfessionalLink(link, locale));
+  if (!links.length) return "";
+  return `<section data-professional-links><ul>${links.map((link) => `<li><a href="${escapeAttribute(link.href)}" target="_blank" rel="noreferrer noopener">${text(professionalLinkLabel(link, locale))}</a></li>`).join("")}</ul></section>`;
+}
+
 function labelsFor(article, locale) {
   const ui = copy[locale];
   return `${text(ui.level)}: ${text(dimension(article.level, locale))} · ${text(ui.format)}: ${text(dimension(article.format, locale))} · ${article.readingMinutes[locale]} ${text(ui.read)}`;
@@ -248,7 +269,7 @@ function renderBrowseFilters({ model, locale, articles }) {
     const select = (id, label, options) => `<label for="${prefix}-filter-${id}">${text(label)}<select id="${prefix}-filter-${id}" data-filter-${id}><option value="">${text(label)}</option>${options}</select></label>`;
     return `${select("category", ui.category, renderFilterOptions(model.categories.filter((category) => localized(category, locale)), locale, (category) => category.id, (category) => localized(category, locale).name))}${select("format", ui.format, formats.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("audience", ui.audience, audiences.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("level", ui.level, levels.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("author", ui.author, renderFilterOptions(authors, locale, (author) => author.id, (author) => localized(author, locale).name))}${select("reading-duration", ui.read, `<option value="under-5">${text(locale === "he" ? "עד 5 דקות" : "Under 5 minutes")}</option><option value="5-10">${text(locale === "he" ? "5–10 דקות" : "5–10 minutes")}</option><option value="10-plus">${text(locale === "he" ? "10 דקות ומעלה" : "10+ minutes")}</option>`)}${select("publication-date", ui.published, `<option value="30-days">${text(locale === "he" ? "30 הימים האחרונים" : "Last 30 days")}</option><option value="90-days">${text(locale === "he" ? "90 הימים האחרונים" : "Last 90 days")}</option><option value="year">${text(locale === "he" ? "השנה האחרונה" : "Last year")}</option>`)}`;
   };
-  return `<aside aria-label="${text(ui.filters)}" data-filter-panel><h2>${text(ui.filters)}</h2><button type="button" data-filter-toggle aria-expanded="false">${text(ui.filters)}</button><div data-active-filters aria-live="polite">${text(ui.activeFilters)}: 0</div><div data-filter-controls>${controls("desktop")}</div></aside><div data-filter-drawer role="dialog" aria-label="${text(ui.filters)}" hidden><div data-filter-controls>${controls("drawer")}</div><button type="button" data-filter-apply>${text(ui.apply)}</button><button type="button" data-filter-clear>${text(ui.clear)}</button></div>`;
+  return `<aside aria-label="${text(ui.filters)}" data-filter-panel><h2>${text(ui.filters)}</h2><button type="button" data-filter-toggle aria-expanded="false">${text(ui.filters)}</button><div data-active-filters aria-live="polite">${text(ui.activeFilters)}: 0</div><div data-filter-controls>${controls("desktop")}</div></aside><div data-filter-drawer role="dialog" aria-label="${text(ui.filters)}" hidden><div data-active-filters aria-live="polite">${text(ui.activeFilters)}: 0</div><div data-filter-controls>${controls("drawer")}</div><button type="button" data-filter-apply>${text(ui.apply)}</button><button type="button" data-filter-clear>${text(ui.clear)}</button></div>`;
 }
 
 export function renderBrowsePage({ model, template, locale, outputPath = blogRoute({ locale, kind: "browse" }) }) {
@@ -281,7 +302,8 @@ export function renderTagPage({ model, template, locale, tag, outputPath = blogR
 }
 
 function seriesEntries(model, series, locale) {
-  return series.articleIds.map((id) => model.byId.article.get(id)).filter((article) => article?.status === "published" && localized(article, locale));
+  const publicArticleIds = new Set(model.publicArticles.map((article) => article.id));
+  return series.articleIds.map((id) => model.byId.article.get(id)).filter((article) => publicArticleIds.has(article?.id) && localized(article, locale));
 }
 
 export function renderSeriesPage({ model, template, locale, series, outputPath = blogRoute({ locale, kind: "series", slug: localized(series, locale).slug }) }) {
@@ -302,9 +324,10 @@ export function renderAuthorPage({ model, template, locale, author, outputPath =
   const authored = articlesFor(model, locale).filter((article) => article.primaryAuthor === author.id || article.coAuthors?.includes(author.id));
   const reviewed = articlesFor(model, locale).filter((article) => article.reviewer === author.id);
   const topics = [...new Set(authored.flatMap((article) => article.tags))].map((id) => localized(tagFor(model, id), locale)?.name).filter(Boolean);
+  const expertise = author.expertise.map((value) => expertiseLabel(model, value, locale));
   const guideCount = authored.filter((article) => article.format === "guide").length;
   const seriesCount = new Set(authored.map((article) => article.series).filter(Boolean)).size;
-  const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.authors, outputPath: blogRoute({ locale, kind: "authors" }) }, { label: content.name }] })}<section class="shell" data-author-page><img src="${escapeAttribute(asset(outputPath, author.portrait))}" alt="${escapeAttribute(content.name)}" /><h1 id="page-title">${text(content.name)}</h1><p>${text(content.role)}</p><p>${text(content.bio)}</p><h2>${text(ui.credentials)}</h2><ul>${author.credentials.map((credential) => `<li>${text(credential)}</li>`).join("")}</ul><dl data-author-counts><dt>${text(ui.articles)}</dt><dd>${authored.length}</dd><dt>${text(ui.guides)}</dt><dd>${guideCount}</dd><dt>${text(ui.seriesCount)}</dt><dd>${seriesCount}</dd></dl><h2>${text(ui.featuredWork)}</h2>${cards({ model, locale, outputPath, articles: authored.slice(0, 1) })}<h2>${text(ui.latestWork)}</h2>${cards({ model, locale, outputPath, articles: authored })}<h2>${text(ui.topics)}</h2><p>${topics.map(text).join(", ")}</p>${reviewed.length ? `<section data-reviewed-content><h2>${text(ui.reviewedWork)}</h2>${cards({ model, locale, outputPath, articles: reviewed })}</section>` : ""}</section>${renderNewsletterPanel({ locale })}`;
+  const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.authors, outputPath: blogRoute({ locale, kind: "authors" }) }, { label: content.name }] })}<section class="shell" data-author-page><img src="${escapeAttribute(asset(outputPath, author.portrait))}" alt="${escapeAttribute(content.name)}" /><h1 id="page-title">${text(content.name)}</h1><p>${text(content.role)}</p><p>${text(content.bio)}</p><h2>${text(ui.credentials)}</h2><ul>${author.credentials.map((credential) => `<li>${text(credential)}</li>`).join("")}</ul><section data-author-profile-expertise><h2>${text(ui.topics)}</h2><p>${expertise.map(text).join(", ")}</p></section>${renderProfessionalLinks({ author, locale })}<dl data-author-counts><dt>${text(ui.articles)}</dt><dd>${authored.length}</dd><dt>${text(ui.guides)}</dt><dd>${guideCount}</dd><dt>${text(ui.seriesCount)}</dt><dd>${seriesCount}</dd></dl><h2>${text(ui.featuredWork)}</h2>${cards({ model, locale, outputPath, articles: authored.slice(0, 1) })}<h2>${text(ui.latestWork)}</h2>${cards({ model, locale, outputPath, articles: authored })}<h2>${text(ui.topics)}</h2><p>${topics.map(text).join(", ")}</p>${reviewed.length ? `<section data-reviewed-content><h2>${text(ui.reviewedWork)}</h2>${cards({ model, locale, outputPath, articles: reviewed })}</section>` : ""}</section>${renderNewsletterPanel({ locale })}`;
   return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "author", slug: localized(author, otherLocale(locale)).slug }), title: content.name, description: content.bio, mainHtml });
 }
 

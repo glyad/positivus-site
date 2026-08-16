@@ -233,6 +233,29 @@ test("publishes only released records at the supplied build time", () => {
   assert.deepEqual(model.publicArticles.map((article) => article.id), ["seo-audit"]);
 });
 
+test("accepts canonical professional links and aggregates unsafe author-link errors", () => {
+  const valid = structuredClone(validRaw);
+  valid.authors[0].professionalLinks = [{
+    label: { en: "Professional profile", he: "פרופיל מקצועי" },
+    href: "https://profiles.example/maya"
+  }];
+  assert.doesNotThrow(() => createBlogModel(valid));
+
+  const invalid = structuredClone(valid);
+  invalid.authors[0].professionalLinks = [
+    { label: "", href: "https://profiles.example/maya" },
+    { label: "Unsafe", href: "https://editor@profiles.example/maya" },
+    { label: "Control", href: "https://profiles.example/ma\nya" }
+  ];
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) => error instanceof AggregateError &&
+      error.errors.some((entry) => /maya-chen.*professionalLinks\[0\]\.label/.test(entry.message)) &&
+      error.errors.some((entry) => /maya-chen.*professionalLinks\[1\]\.href/.test(entry.message)) &&
+      error.errors.some((entry) => /maya-chen.*professionalLinks\[2\]\.href/.test(entry.message))
+  );
+});
+
 test("aggregates malformed relationship, locale, and media errors with field context", () => {
   const invalid = structuredClone(validRaw);
   invalid.articles[0].primaryCategory = "unknown";

@@ -384,3 +384,59 @@ test("Blog Home gives only its featured guide escaped, depth-safe hero artwork",
   assert.match(html, /src="\.\.\/assets\/images\/decor\/hero-illustration\.svg" alt="A &amp; B"/);
   assert.equal((html.match(/data-featured-card/g) ?? []).length, 1);
 });
+
+test("mobile filter drawer owns its active-filter live region and actions", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-filter-drawer-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const html = await readFile(resolve(outputDir, "blog/search/index.html"), "utf8");
+  const drawer = html.slice(html.indexOf("<div data-filter-drawer"));
+  assert.match(drawer, /data-active-filters[^>]*aria-live="polite"/);
+  assert.match(drawer, /data-filter-apply/);
+  assert.match(drawer, /data-filter-clear/);
+});
+
+test("future-dated series records never enter public routes, series navigation, or related cards", async () => {
+  const sourceDir = resolve(repositoryRoot, "sources");
+  const raw = await loadLocalBlogSource({ sourceDir });
+  const future = structuredClone(raw.articles.find((article) => article.id === "analytics-attribution-models"));
+  future.id = "future-series-entry";
+  future.publishedAt = "2026-09-01T09:00:00.000Z";
+  future.editedAt = "2026-09-01T09:00:00.000Z";
+  future.locales.en.slug = "future-series-entry";
+  future.locales.en.title = "Future series entry";
+  raw.articles.push(future);
+  raw.series.find((series) => series.id === "measurement-that-matters").articleIds.push("future-series-entry");
+  const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00.000Z") });
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-future-series-"));
+  const pages = await renderBlogSite({ model, sourceDir, outputDir, version: "1.2.0" });
+
+  const [series, analytics, dashboard] = await Promise.all([
+    readFile(resolve(outputDir, "blog/series/measurement-that-matters/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/analytics-attribution-models/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8")
+  ]);
+  assert.ok(!pages.includes("blog/future-series-entry/index.html"));
+  assert.doesNotMatch(series, /Future series entry/);
+  assert.doesNotMatch(analytics, /future-series-entry/);
+  assert.doesNotMatch(dashboard, /future-series-entry/);
+});
+
+test("author profiles keep declared expertise and validated professional links when authored topics are empty", async () => {
+  const sourceDir = resolve(repositoryRoot, "sources");
+  const raw = await loadLocalBlogSource({ sourceDir });
+  const maya = raw.authors.find((author) => author.id === "maya-chen");
+  maya.professionalLinks = [{ label: { en: "Professional profile", he: "פרופיל מקצועי" }, href: "https://profiles.example/maya" }];
+  for (const article of raw.articles.filter((article) => article.primaryAuthor === "maya-chen")) article.tags = [];
+  const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00.000Z") });
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-author-profile-"));
+  await renderBlogSite({ model, sourceDir, outputDir, version: "1.2.0" });
+
+  const html = await readFile(resolve(outputDir, "blog/authors/maya-chen/index.html"), "utf8");
+  assert.match(html, /data-author-profile-expertise/);
+  assert.match(html, /Strategy &amp; Growth/);
+  assert.match(html, /Demand generation/);
+  assert.match(html, /data-professional-links/);
+  assert.match(html, /href="https:\/\/profiles\.example\/maya" target="_blank" rel="noreferrer noopener">Professional profile<\/a>/);
+});
