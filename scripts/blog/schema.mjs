@@ -78,6 +78,33 @@ function isSafeAssetPath(value) {
     !value.startsWith("/");
 }
 
+function isSafeLink(value) {
+  if (typeof value !== "string" || !value.trim() || /[\u0000-\u001F\u007F]/u.test(value)) return false;
+  const link = value.trim();
+  if (link.startsWith("//")) return false;
+  try {
+    const target = new URL(link, "https://content.invalid/");
+    return ["https:", "http:", "mailto:"].includes(target.protocol) && !target.username && !target.password;
+  } catch {
+    return false;
+  }
+}
+
+function validateLinkFields(value, id, locale, field, collector) {
+  if (Array.isArray(value)) {
+    value.forEach((entry, index) => validateLinkFields(entry, id, locale, `${field}[${index}]`, collector));
+    return;
+  }
+  if (!isObject(value)) return;
+  for (const [key, entry] of Object.entries(value)) {
+    const entryField = `${field}.${key}`;
+    if (["href", "url", "link"].includes(key) && typeof entry === "string" && !isSafeLink(entry)) {
+      collector.add(id, locale, entryField, "must be a safe link");
+    }
+    validateLinkFields(entry, id, locale, entryField, collector);
+  }
+}
+
 function validateId(record, type, collector) {
   if (!isObject(record)) {
     collector.add(type, "record", "record", "must be an object");
@@ -135,13 +162,51 @@ function validateLocalizedSlugs(records, type, collector) {
   }
 }
 
+function isInternalRoute(value) {
+  return typeof value === "string" && value.startsWith("/") && !value.startsWith("//") &&
+    !value.includes("\\") && !value.split("/").includes("..");
+}
+
+function validateArchivedResolution(article, collector) {
+  const { id, redirect, withdrawal } = article;
+  if (redirect !== undefined && withdrawal !== undefined) {
+    collector.add(id, "record", "redirect", "archived articles may define either a redirect or a withdrawal, not both");
+    return;
+  }
+  if (redirect !== undefined) {
+    if (!isObject(redirect)) {
+      collector.add(id, "record", "redirect", "must be a documented redirect object");
+      return;
+    }
+    if (!LOCALES.includes(redirect.locale)) collector.add(id, "record", "redirect.locale", "must be a supported locale");
+    if (!isInternalRoute(redirect.oldPath)) collector.add(id, "record", "redirect.oldPath", "must be a safe absolute site path");
+    if (!isInternalRoute(redirect.replacementPath)) collector.add(id, "record", "redirect.replacementPath", "must be a safe absolute site path");
+    if (![301, 302, 307, 308].includes(redirect.statusCode)) collector.add(id, "record", "redirect.statusCode", "must be a supported redirect status code");
+    if (typeof redirect.reason !== "string" || !redirect.reason.trim()) collector.add(id, "record", "redirect.reason", "must document the redirect reason");
+    return;
+  }
+  if (withdrawal !== undefined) {
+    if (!isObject(withdrawal)) {
+      collector.add(id, "record", "withdrawal", "must be a documented withdrawal object");
+      return;
+    }
+    if (!LOCALES.includes(withdrawal.locale)) collector.add(id, "record", "withdrawal.locale", "must be a supported locale");
+    if (![404, 410].includes(withdrawal.statusCode)) collector.add(id, "record", "withdrawal.statusCode", "must be a withdrawal response status code");
+    if (typeof withdrawal.reason !== "string" || !withdrawal.reason.trim()) collector.add(id, "record", "withdrawal.reason", "must document the withdrawal reason");
+    return;
+  }
+  collector.add(id, "record", "withdrawal", "archived articles require a redirect or documented withdrawal response");
+}
+
 function parseDate(value, id, field, collector) {
   if (typeof value !== "string" || !ISO_DATE_PATTERN.test(value)) {
     collector.add(id, "record", field, "must be an ISO UTC date-time");
     return null;
   }
   const date = new Date(value);
-  if (Number.isNaN(date.valueOf())) {
+  const normalizedInput = value.replace(".000Z", "Z");
+  const normalizedDate = Number.isNaN(date.valueOf()) ? null : date.toISOString().replace(".000Z", "Z");
+  if (normalizedDate !== normalizedInput) {
     collector.add(id, "record", field, "must be a valid date");
     return null;
   }
@@ -182,6 +247,7 @@ function validateBlock(block, id, locale, index, collector) {
       (typeof block.alt !== "string" || !block.alt.trim())) {
     collector.add(id, locale, `${field}.alt`, "must be a non-empty string or media must be decorative");
   }
+  validateLinkFields(block, id, locale, field, collector);
 }
 
 function indexRecords(records, type, collector) {
@@ -209,10 +275,23 @@ function validateCollectionRecords(raw, indexes, collector) {
   for (const tag of indexes.tag.values()) {
     tag.availableLocales = validateLocales(tag, tag.id, collector, ["name", "slug"]);
     if (tag.status !== undefined && !["active", "retired"].includes(tag.status)) collector.add(tag.id, "record", "status", "must be active or retired");
-    if (tag.status === "retired") {
-      if (typeof tag.replacementTag !== "string" || !indexes.tag.has(tag.replacementTag) || tag.replacementTag === tag.id) {
-        collector.add(tag.id, "record", "replacementTag", "must reference a different valid replacement tag for retired tags");
+  }
+  for (const tag of indexes.tag.values()) {
+    if (tag.status !== "retired") continue;
+    const seen = new Set([tag.id]);
+    let current = tag;
+    while (current.status === "retired") {
+      const replacementId = current.replacementTag;
+      const replacement = indexes.tag.get(replacementId);
+      if (typeof replacementId !== "string" || !replacement || seen.has(replacementId)) {
+        collector.add(tag.id, "record", "replacementTag", "must resolve to an active replacement tag without a cycle");
+        break;
       }
+      seen.add(replacementId);
+      current = replacement;
+    }
+    if (current.status !== undefined && current.status !== "active" && current.status !== "retired") {
+      collector.add(tag.id, "record", "replacementTag", "must resolve to an active replacement tag without a cycle");
     }
   }
   for (const author of indexes.author.values()) {
@@ -257,7 +336,13 @@ function validateArticle(article, indexes, collector) {
     else for (const authorId of people) if (!indexes.author.has(authorId)) collector.add(id, "record", field, `references unknown author ${authorId}`);
   }
   if (article.series !== undefined && !indexes.series.has(article.series)) collector.add(id, "record", "series", "must reference a valid series");
-  for (const relatedId of article.relatedArticles ?? []) if (!indexes.article.has(relatedId)) collector.add(id, "record", "relatedArticles", `references unknown article ${relatedId}`);
+  if (article.relatedArticles !== undefined && !Array.isArray(article.relatedArticles)) {
+    collector.add(id, "record", "relatedArticles", "must be an array of article IDs");
+  } else {
+    for (const relatedId of article.relatedArticles ?? []) {
+      if (!indexes.article.has(relatedId)) collector.add(id, "record", "relatedArticles", `references unknown article ${relatedId}`);
+    }
+  }
   if (article.relatedService && typeof article.relatedService !== "string") collector.add(id, "record", "relatedService", "must be a service ID string");
 
   const publishedAt = parseDate(article.publishedAt, id, "publishedAt", collector);
@@ -265,18 +350,23 @@ function validateArticle(article, indexes, collector) {
   if (publishedAt && editedAt && editedAt < publishedAt) collector.add(id, "record", "editedAt", "must not precede publishedAt");
   article.publishedAt = publishedAt;
   article.editedAt = editedAt;
-  if (article.status === "archived" && !article.redirect && !article.withdrawal) {
-    collector.add(id, "record", "withdrawal", "archived articles require a redirect or documented withdrawal response");
-  }
+  if (article.status === "archived") validateArchivedResolution(article, collector);
 
   validateHero(article.hero, id, locales, collector);
   for (const locale of locales) {
-    article.locales[locale].blocks.forEach((block, index) => validateBlock(block, id, locale, index, collector));
+    const blocks = article.locales[locale].blocks;
+    if (Array.isArray(blocks)) blocks.forEach((block, index) => validateBlock(block, id, locale, index, collector));
   }
-  const allBlocks = locales.flatMap((locale) => article.locales[locale].blocks);
-  article.readingMinutes = Number.isInteger(article.readingMinutesOverride) && article.readingMinutesOverride > 0
-    ? article.readingMinutesOverride
-    : calculateReadingMinutes(allBlocks);
+  article.readingMinutes = Object.fromEntries(locales.map((locale) => {
+    const override = isObject(article.readingMinutesOverride)
+      ? article.readingMinutesOverride[locale]
+      : article.readingMinutesOverride;
+    const minutes = Number.isInteger(override) && override > 0
+      ? override
+      : calculateReadingMinutes(article.locales[locale].blocks);
+    article.locales[locale].readingMinutes = minutes;
+    return [locale, minutes];
+  }));
 }
 
 /**
