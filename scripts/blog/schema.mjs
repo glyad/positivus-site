@@ -11,6 +11,9 @@ const FORMATS = new Set([
   "industry-update"
 ]);
 const AUDIENCES = new Set(["leaders", "practitioners", "specialists"]);
+const EXPERTISE_DIMENSIONS = new Set([
+  "strategy", "analytics", "content", "social", "paid-media", "email", "lifecycle"
+]);
 const BLOCK_TYPES = new Set([
   "introduction",
   "keyTakeaways",
@@ -131,6 +134,19 @@ function validateProfessionalLinks(author, collector) {
 
     if (!isCanonicalHttpsLink(link.href)) {
       collector.add(author.id, "record", `${field}.href`, "must be a canonical HTTPS link without credentials or control characters");
+    }
+  });
+}
+
+function validateAuthorExpertise(author, indexes, collector) {
+  if (!Array.isArray(author.expertise) || author.expertise.length === 0) {
+    collector.add(author.id, "record", "expertise", "must be a non-empty array of governed or dimension IDs");
+    return;
+  }
+  author.expertise.forEach((expertise, index) => {
+    if (typeof expertise !== "string" || !expertise.trim() ||
+        (!indexes.category.has(expertise) && !indexes.tag.has(expertise) && !EXPERTISE_DIMENSIONS.has(expertise))) {
+      collector.add(author.id, "record", `expertise[${index}]`, "must be a non-empty governed or dimension ID");
     }
   });
 }
@@ -383,11 +399,31 @@ function validateCollectionRecords(raw, indexes, collector) {
   for (const author of indexes.author.values()) {
     author.availableLocales = validateLocales(author, author.id, collector, ["name", "slug", "bio", "credentials"]);
     if (!isSafeAssetPath(author.portrait)) collector.add(author.id, "record", "portrait", "must be a safe local asset path");
+    validateAuthorExpertise(author, indexes, collector);
     validateProfessionalLinks(author, collector);
   }
   for (const series of indexes.series.values()) {
     series.availableLocales = validateLocales(series, series.id, collector, ["title", "slug"]);
     if (series.artwork && !isSafeAssetPath(series.artwork)) collector.add(series.id, "record", "artwork", "must be a safe local asset path");
+    if (!Array.isArray(series.articleIds)) {
+      collector.add(series.id, "record", "articleIds", "must be an array of valid unique article IDs");
+    } else {
+      if (new Set(series.articleIds).size !== series.articleIds.length) collector.add(series.id, "record", "articleIds", "must not contain duplicate article IDs");
+      series.articleIds.forEach((articleId, index) => {
+        if (typeof articleId !== "string" || !indexes.article.has(articleId)) {
+          collector.add(series.id, "record", `articleIds[${index}]`, "must reference a valid article ID");
+        }
+      });
+    }
+    if (!Array.isArray(series.audiences) || series.audiences.length === 0) {
+      collector.add(series.id, "record", "audiences", "must be a non-empty array of supported audiences");
+    } else {
+      if (new Set(series.audiences).size !== series.audiences.length) collector.add(series.id, "record", "audiences", "must not contain duplicate audiences");
+      series.audiences.forEach((audience, index) => {
+        if (!AUDIENCES.has(audience)) collector.add(series.id, "record", `audiences[${index}]`, "must be a supported audience");
+      });
+    }
+    if (!LEVELS.has(series.level)) collector.add(series.id, "record", "level", "must be a supported level");
   }
 
   validateLocalizedSlugs([...indexes.category.values()], "category", collector);

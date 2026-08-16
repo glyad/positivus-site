@@ -490,3 +490,26 @@ test("renders Hebrew author credentials without English leakage", async () => {
   assert.match(html, /MBA באסטרטגיית צמיחה/);
   assert.doesNotMatch(html, /MBA, growth strategy/);
 });
+
+test("emits localized empty Blog Home states when no articles are publicly available", async () => {
+  const sourceDir = resolve(repositoryRoot, "sources");
+  const raw = await loadLocalBlogSource({ sourceDir });
+  for (const article of raw.articles) article.status = "scheduled";
+  const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00.000Z") });
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-empty-home-"));
+  const pages = await renderBlogSite({ model, sourceDir, outputDir, version: "1.2.0" });
+
+  assert.deepEqual(model.publicArticles, []);
+  assert.ok(pages.includes("blog/index.html"));
+  assert.ok(pages.includes("he/blog/index.html"));
+  const [english, hebrew] = await Promise.all([
+    readFile(resolve(outputDir, "blog/index.html"), "utf8"),
+    readFile(resolve(outputDir, "he/blog/index.html"), "utf8")
+  ]);
+  assert.match(english, /data-blog-empty/);
+  assert.match(english, /Search the blog/);
+  assert.match(hebrew, /data-blog-empty/);
+  assert.match(hebrew, /חיפוש בבלוג/);
+  assert.doesNotMatch(english, /data-featured-card/);
+  assert.doesNotMatch(hebrew, /data-featured-card/);
+});

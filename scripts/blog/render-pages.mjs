@@ -21,7 +21,8 @@ const copy = {
     noResults: "Search the blog", noResultsBody: "Use the search and filters to find practical marketing guidance.",
     home: "Knowledge Hub", category: "Category", tag: "Topic", author: "Author", searchPlaceholder: "Search titles, topics, and authors",
     tagIndex: "All topics", backToTagIndex: "Browse all topics", relatedCategories: "Related categories", formats: "Formats", levels: "Levels", apply: "Apply",
-    featuredInCategory: "Featured in this category", remainingInCategory: "More in this category", articles: "Articles", guides: "Guides", seriesCount: "Series"
+    featuredInCategory: "Featured in this category", remainingInCategory: "More in this category", articles: "Articles", guides: "Guides", seriesCount: "Series",
+    empty: "New insights are on the way", emptyBody: "Search the blog or browse our topics while we prepare the next practical guide."
   },
   he: {
     latest: "תובנות אחרונות", featured: "מדריך נבחר", evergreen: "למידה מתמשכת",
@@ -41,7 +42,8 @@ const copy = {
     noResults: "חיפוש בבלוג", noResultsBody: "השתמשו בחיפוש ובמסננים כדי למצוא הנחיות שיווק מעשיות.",
     home: "מרכז הידע", category: "קטגוריה", tag: "נושא", author: "כותב", searchPlaceholder: "חיפוש בכותרות, נושאים וכותבים",
     tagIndex: "כל הנושאים", backToTagIndex: "לכל הנושאים", relatedCategories: "קטגוריות קשורות", formats: "פורמטים", levels: "רמות", apply: "החלה",
-    featuredInCategory: "נבחר בקטגוריה", remainingInCategory: "עוד בקטגוריה", articles: "מאמרים", guides: "מדריכים", seriesCount: "סדרות"
+    featuredInCategory: "נבחר בקטגוריה", remainingInCategory: "עוד בקטגוריה", articles: "מאמרים", guides: "מדריכים", seriesCount: "סדרות",
+    empty: "תובנות חדשות בדרך", emptyBody: "חפשו בבלוג או עיינו בנושאים שלנו בזמן שאנחנו מכינים את המדריך המעשי הבא."
   }
 };
 
@@ -102,7 +104,7 @@ function articleRoute(article, locale) {
 }
 
 function articlesFor(model, locale) {
-  return model.publicArticles
+  return (model.publicArticles ?? [])
     .filter((article) => localized(article, locale))
     .sort((left, right) => right.publishedAt - left.publishedAt || left.id.localeCompare(right.id));
 }
@@ -169,7 +171,7 @@ export function renderAuthorCard({ model, locale, outputPath, author }) {
   <img src="${escapeAttribute(asset(outputPath, author.portrait))}" alt="${escapeAttribute(content.name)}" />
   <h3><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "author", slug: content.slug })))}">${text(content.name)}</a></h3>
   <p>${text(content.role)}</p><p>${text(content.bio)}</p>
-  <p data-author-expertise>${author.expertise.map((value) => text(expertiseLabel(model, value, locale))).join(", ")}</p>
+  <p data-author-expertise>${(Array.isArray(author.expertise) ? author.expertise : []).map((value) => text(expertiseLabel(model, value, locale))).join(", ")}</p>
   <p data-author-count>${articles.length} ${text(ui.entries)}</p>
 </article>`;
 }
@@ -240,13 +242,16 @@ export function renderBlogHome({ model, template, locale, version = "", outputPa
   const articles = articlesFor(model, locale);
   const featured = articles.find((article) => article.id === model.settings.featuredArticle) ?? articles[0];
   const categories = model.categories.filter((category) => localized(category, locale));
+  const articleSections = featured
+    ? `<section class="shell" aria-labelledby="featured-title"><h2 id="featured-title">${text(ui.featured)}</h2>${renderArticleCard({ model, locale, outputPath, article: featured, featured: true })}</section>
+<section class="shell" aria-labelledby="latest-title"><h2 id="latest-title">${text(ui.latest)}</h2>${cards({ model, locale, outputPath, articles: articles.filter((article) => article.id !== featured.id).slice(0, 6) })}<p><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "browse" })))}">${text(ui.browse)}</a></p></section>
+<section class="shell" aria-labelledby="evergreen-title"><h2 id="evergreen-title">${text(ui.evergreen)}</h2>${cards({ model, locale, outputPath, articles: articles.slice(-3).reverse() })}</section>`
+    : `<section class="shell" data-blog-empty><h2>${text(ui.empty)}</h2><p>${text(ui.emptyBody)}</p><p><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "browse" })))}">${text(ui.browse)}</a></p></section>`;
   const mainHtml = `<section class="blog-home shell" data-blog-home data-build-version="${escapeAttribute(version)}">
   <p>${text(ui.home)}</p><h1 id="page-title">${text(settings.title)}</h1><p>${text(settings.summary)}</p>${renderSearch({ locale, outputPath })}
   <nav aria-label="${text(ui.categories)}"><ul>${categories.map((category) => { const entry = localized(category, locale); return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "category", slug: entry.slug })))}">${text(entry.name)}</a></li>`; }).join("")}</ul></nav>
 </section>
-<section class="shell" aria-labelledby="featured-title"><h2 id="featured-title">${text(ui.featured)}</h2>${renderArticleCard({ model, locale, outputPath, article: featured, featured: true })}</section>
-<section class="shell" aria-labelledby="latest-title"><h2 id="latest-title">${text(ui.latest)}</h2>${cards({ model, locale, outputPath, articles: articles.filter((article) => article.id !== featured.id).slice(0, 6) })}<p><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "browse" })))}">${text(ui.browse)}</a></p></section>
-<section class="shell" aria-labelledby="evergreen-title"><h2 id="evergreen-title">${text(ui.evergreen)}</h2>${cards({ model, locale, outputPath, articles: articles.slice(-3).reverse() })}</section>
+${articleSections}
 <section class="shell" aria-labelledby="authors-title"><h2 id="authors-title">${text(ui.authors)}</h2><div class="author-grid">${model.authors.filter((author) => localized(author, locale)).sort((a, b) => localized(a, locale).name.localeCompare(localized(b, locale).name, locale)).map((author) => renderAuthorCard({ model, locale, outputPath, author })).join("")}</div></section>
 <div class="shell">${renderTagCloud({ model, locale, outputPath })}${renderNewsletterPanel({ locale })}</div>`;
   return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "home" }), title: settings.title, description: settings.summary, mainHtml, bodyClass: "blog-page blog-home-page" });
@@ -307,14 +312,14 @@ export function renderTagPage({ model, template, locale, tag, outputPath = blogR
 }
 
 function seriesEntries(model, series, locale) {
-  const publicArticleIds = new Set(model.publicArticles.map((article) => article.id));
-  return series.articleIds.map((id) => model.byId.article.get(id)).filter((article) => publicArticleIds.has(article?.id) && localized(article, locale));
+  const publicArticleIds = new Set((model.publicArticles ?? []).map((article) => article.id));
+  return (Array.isArray(series?.articleIds) ? series.articleIds : []).map((id) => model.byId.article.get(id)).filter((article) => publicArticleIds.has(article?.id) && localized(article, locale));
 }
 
 export function renderSeriesPage({ model, template, locale, series, outputPath = blogRoute({ locale, kind: "series", slug: localized(series, locale).slug }) }) {
-  const ui = copy[locale]; const content = localized(series, locale); const entries = seriesEntries(model, series, locale);
+  const ui = copy[locale]; const content = localized(series, locale); const entries = seriesEntries(model, series, locale); const audiences = Array.isArray(series.audiences) ? series.audiences : [];
   const total = entries.reduce((sum, article) => sum + article.readingMinutes[locale], 0);
-  const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: content.title }] })}<section class="shell" data-series-page><h1 id="page-title">${text(content.title)}</h1><p>${text(content.description)}</p><dl><dt>${text(ui.audience)}</dt><dd>${series.audiences.map((value) => text(dimension(value, locale))).join(", ")}</dd><dt>${text(ui.level)}</dt><dd>${text(dimension(series.level, locale))}</dd><dt>${text(ui.totalReading)}</dt><dd>${total} ${text(ui.read)}</dd></dl><ol data-series-entries>${entries.map((article) => `<li>${renderArticleCard({ model, locale, outputPath, article })}</li>`).join("")}</ol></section>`;
+  const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: content.title }] })}<section class="shell" data-series-page><h1 id="page-title">${text(content.title)}</h1><p>${text(content.description)}</p><dl><dt>${text(ui.audience)}</dt><dd>${audiences.map((value) => text(dimension(value, locale))).join(", ")}</dd><dt>${text(ui.level)}</dt><dd>${text(dimension(series.level, locale))}</dd><dt>${text(ui.totalReading)}</dt><dd>${total} ${text(ui.read)}</dd></dl><ol data-series-entries>${entries.map((article) => `<li>${renderArticleCard({ model, locale, outputPath, article })}</li>`).join("")}</ol></section>`;
   const peer = localized(series, otherLocale(locale));
   return documentPage({ model, template, locale, outputPath, alternateOutputPath: peer ? blogRoute({ locale: otherLocale(locale), kind: "series", slug: peer.slug }) : null, title: content.title, description: content.description, mainHtml });
 }
@@ -330,7 +335,7 @@ export function renderAuthorPage({ model, template, locale, author, outputPath =
   const authored = articlesFor(model, locale).filter((article) => article.primaryAuthor === author.id || article.coAuthors?.includes(author.id));
   const reviewed = articlesFor(model, locale).filter((article) => article.reviewer === author.id);
   const topics = [...new Set(authored.flatMap((article) => article.tags))].map((id) => localized(tagFor(model, id), locale)?.name).filter(Boolean);
-  const expertise = author.expertise.map((value) => expertiseLabel(model, value, locale));
+  const expertise = (Array.isArray(author.expertise) ? author.expertise : []).map((value) => expertiseLabel(model, value, locale));
   const guideCount = authored.filter((article) => article.format === "guide").length;
   const seriesCount = new Set(authored.map((article) => article.series).filter(Boolean)).size;
   const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.authors, outputPath: blogRoute({ locale, kind: "authors" }) }, { label: content.name }] })}<section class="shell" data-author-page><img src="${escapeAttribute(asset(outputPath, author.portrait))}" alt="${escapeAttribute(content.name)}" /><h1 id="page-title">${text(content.name)}</h1><p>${text(content.role)}</p><p>${text(content.bio)}</p><h2>${text(ui.credentials)}</h2><ul>${content.credentials.map((credential) => `<li>${text(credential)}</li>`).join("")}</ul><section data-author-profile-expertise><h2>${text(ui.topics)}</h2><p>${expertise.map(text).join(", ")}</p></section>${renderProfessionalLinks({ author, locale })}<dl data-author-counts><dt>${text(ui.articles)}</dt><dd>${authored.length}</dd><dt>${text(ui.guides)}</dt><dd>${guideCount}</dd><dt>${text(ui.seriesCount)}</dt><dd>${seriesCount}</dd></dl><h2>${text(ui.featuredWork)}</h2>${cards({ model, locale, outputPath, articles: authored.slice(0, 1) })}<h2>${text(ui.latestWork)}</h2>${cards({ model, locale, outputPath, articles: authored })}<h2>${text(ui.topics)}</h2><p>${topics.map(text).join(", ")}</p>${reviewed.length ? `<section data-reviewed-content><h2>${text(ui.reviewedWork)}</h2>${cards({ model, locale, outputPath, articles: reviewed })}</section>` : ""}</section>${renderNewsletterPanel({ locale })}`;

@@ -42,7 +42,7 @@ const validRaw = {
   },
   categories: [{ id: "seo", order: 2, locales: { en: { name: "SEO", slug: "seo" }, he: { name: "SEO", slug: "seo" } } }],
   tags: [{ id: "technical-seo", locales: { en: { name: "Technical SEO", slug: "technical-seo" }, he: { name: "SEO טכני", slug: "technical-seo" } } }],
-  authors: [{ id: "maya-chen", portrait: "assets/images/team/team-1.webp", locales: { en: { name: "Maya Chen", slug: "maya-chen", bio: "Growth strategist.", credentials: ["Growth strategy"] }, he: { name: "מאיה צ׳ן", slug: "maya-chen", bio: "אסטרטגית צמיחה.", credentials: ["אסטרטגיית צמיחה"] } } }],
+  authors: [{ id: "maya-chen", portrait: "assets/images/team/team-1.webp", expertise: ["seo"], locales: { en: { name: "Maya Chen", slug: "maya-chen", bio: "Growth strategist.", credentials: ["Growth strategy"] }, he: { name: "מאיה צ׳ן", slug: "maya-chen", bio: "אסטרטגית צמיחה.", credentials: ["אסטרטגיית צמיחה"] } } }],
   series: [],
   articles: [{
     id: "seo-audit",
@@ -240,6 +240,31 @@ test("requires credentials localized for every available author locale", () => {
   assert.throws(
     () => createBlogModel(invalid),
     (error) => error instanceof AggregateError && error.errors.some((entry) => /maya-chen.*he.*credentials/.test(entry.message))
+  );
+});
+
+test("rejects malformed author expertise and series fields before rendering", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.authors[0].expertise = ["", "unknown-expertise"];
+  invalid.series = [{
+    id: "malformed-series",
+    articleIds: ["seo-audit", "seo-audit", "missing-article"],
+    audiences: [],
+    level: "expert",
+    locales: {
+      en: { title: "Malformed series", slug: "malformed-series" },
+      he: { title: "סדרה פגומה", slug: "malformed-series" }
+    }
+  }];
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) => error instanceof AggregateError &&
+      error.errors.some((entry) => /maya-chen.*expertise\[0\]/.test(entry.message)) &&
+      error.errors.some((entry) => /maya-chen.*expertise\[1\]/.test(entry.message)) &&
+      error.errors.some((entry) => /malformed-series.*articleIds/.test(entry.message)) &&
+      error.errors.some((entry) => /malformed-series.*audiences/.test(entry.message)) &&
+      error.errors.some((entry) => /malformed-series.*level/.test(entry.message))
   );
 });
 
