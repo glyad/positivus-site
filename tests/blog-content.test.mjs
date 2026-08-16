@@ -91,6 +91,28 @@ test("rejects percent-encoded traversal in hero, portrait, and nested block asse
   );
 });
 
+test("rejects deeply encoded and malformed percent sequences in local assets", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.articles[0].hero.src = "assets/%25252525252Fprivate.webp";
+  invalid.authors[0].portrait = "assets/%25252525255cprivate.webp";
+  invalid.articles[0].locales.en.blocks = [{
+    type: "figure",
+    src: "assets/%25252525252e%25252525252e/private.webp",
+    alt: "Unsafe asset path"
+  }];
+  invalid.categories[0].artwork = "assets/%";
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) =>
+      error instanceof AggregateError &&
+      error.errors.some((entry) => /seo-audit.*hero\.src/.test(entry.message)) &&
+      error.errors.some((entry) => /maya-chen.*portrait/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*en.*blocks\[0\]\.src/.test(entry.message)) &&
+      error.errors.some((entry) => /seo.*artwork/.test(entry.message))
+  );
+});
+
 test("creates lookup indexes and derived reading time", () => {
   const model = createBlogModel(validRaw, { now: new Date("2026-08-15T00:00:00Z") });
   assert.deepEqual(model.byId.article.get("seo-audit").readingMinutes, { en: 1, he: 1 });

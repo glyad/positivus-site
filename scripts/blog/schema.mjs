@@ -70,22 +70,12 @@ function createErrorCollector() {
 }
 
 function isSafeAssetPath(value) {
-  if (typeof value !== "string") return false;
-  let decoded = value;
-  try {
-    for (let index = 0; index < 4; index += 1) {
-      const next = decodeURIComponent(decoded);
-      if (next === decoded) break;
-      decoded = next;
-    }
-  } catch {
-    return false;
-  }
-  const segments = decoded.split("/");
-  return decoded.startsWith("assets/") &&
-    !decoded.includes("\\") &&
-    !decoded.includes("://") &&
-    !decoded.startsWith("/") &&
+  if (typeof value !== "string" || value.includes("%")) return false;
+  const segments = value.split("/");
+  return value.startsWith("assets/") &&
+    !value.includes("\\") &&
+    !value.includes("://") &&
+    !value.startsWith("/") &&
     segments.length > 1 &&
     segments.every((segment, index) => index === 0 || (segment !== "" && segment !== "." && segment !== ".."));
 }
