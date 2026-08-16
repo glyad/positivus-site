@@ -1,4 +1,6 @@
 import {
+  commentDemoState,
+  createDemoComment,
   drawerFocusAction,
   filterBlogDocuments,
   noResultsRecovery,
@@ -16,8 +18,8 @@ function locale() {
 
 function blogCopy() {
   return locale() === "he"
-    ? { results: "תוצאות", page: "עמוד", previous: "הקודם", next: "הבא", by: "מאת", noResults: "לא נמצאו תוצאות", filters: "מסננים פעילים" }
-    : { results: "results", page: "Page", previous: "Previous", next: "Next", by: "By", noResults: "No results", filters: "Active filters" };
+    ? { results: "תוצאות", page: "עמוד", previous: "הקודם", next: "הבא", by: "מאת", noResults: "לא נמצאו תוצאות", filters: "מסננים פעילים", copySucceeded: "הקישור הועתק.", copyFailed: "לא הצלחנו להעתיק את הקישור.", commentAdded: "תגובת הדגמה נוספה למפגש הנוכחי בעמוד.", commentTooShort: "כתבו לפחות 2 תווים.", commentTooLong: "כתבו עד 2000 תווים." }
+    : { results: "results", page: "Page", previous: "Previous", next: "Next", by: "By", noResults: "No results", filters: "Active filters", copySucceeded: "Link copied.", copyFailed: "Could not copy the link.", commentAdded: "Demo comment added for this page session.", commentTooShort: "Write at least 2 characters.", commentTooLong: "Write no more than 2000 characters." };
 }
 
 function selectedValues(control) {
@@ -254,6 +256,105 @@ function initAuthorDirectory() {
   render();
 }
 
+function canonicalArticleUrl() {
+  return document.querySelector('link[rel="canonical"]')?.href ?? window.location.href;
+}
+
+function copyWithSelectionFallback(value) {
+  const control = document.createElement("textarea");
+  control.value = value;
+  control.setAttribute("readonly", "");
+  control.style.position = "fixed";
+  control.style.opacity = "0";
+  document.body.append(control);
+  control.select();
+  const copied = document.execCommand("copy");
+  control.remove();
+  return copied;
+}
+
+function initArticleTools() {
+  const status = document.querySelector("[data-article-tools-status]");
+  const announce = (message) => { if (status) status.textContent = message; };
+  document.querySelector("[data-copy-link]")?.addEventListener("click", async () => {
+    const value = canonicalArticleUrl();
+    try {
+      if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
+      else if (!copyWithSelectionFallback(value)) throw new Error("Clipboard selection failed");
+      announce(blogCopy().copySucceeded);
+    } catch {
+      try {
+        if (!copyWithSelectionFallback(value)) throw new Error("Clipboard selection failed");
+        announce(blogCopy().copySucceeded);
+      } catch {
+        announce(blogCopy().copyFailed);
+      }
+    }
+  });
+  document.querySelector("[data-print-article]")?.addEventListener("click", () => window.print());
+}
+
+function initArticleToc() {
+  const toc = document.querySelector("[data-article-toc]");
+  if (!toc) return;
+  const links = [...toc.querySelectorAll('a[href^="#"]')];
+  const setCurrent = (id) => {
+    for (const link of links) {
+      const current = link.getAttribute("href") === `#${id}`;
+      link.toggleAttribute("aria-current", current);
+      link.closest("li")?.toggleAttribute("data-toc-current", current);
+    }
+  };
+  const sections = links.map((link) => document.getElementById(link.getAttribute("href").slice(1))).filter(Boolean);
+  for (const link of links) link.addEventListener("click", () => setCurrent(link.getAttribute("href").slice(1)));
+  if (typeof IntersectionObserver !== "function" || !sections.length) return;
+  const visible = new Set();
+  const observer = new IntersectionObserver((entries) => {
+    for (const entry of entries) {
+      if (entry.isIntersecting) visible.add(entry.target);
+      else visible.delete(entry.target);
+    }
+    const current = sections.find((section) => visible.has(section));
+    if (current) setCurrent(current.id);
+  }, { rootMargin: "0px 0px -60% 0px" });
+  for (const section of sections) observer.observe(section);
+}
+
+const demoComments = [];
+
+function initDemoComments() {
+  for (const root of document.querySelectorAll("[data-demo-comments]")) {
+    const state = commentDemoState(window.location.search);
+    const signedOut = root.querySelector("[data-demo-comment-signed-out]");
+    const form = root.querySelector("[data-demo-comment-form]");
+    const list = root.querySelector("[data-demo-comment-list]");
+    const status = root.querySelector("[data-demo-comment-status]");
+    root.dataset.demoCommentState = state;
+    if (signedOut) signedOut.hidden = state === "signed-in";
+    if (form) form.hidden = state !== "signed-in";
+    if (state !== "signed-in" || !form || !list) continue;
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const textarea = form.elements.comment;
+      try {
+        const comment = createDemoComment(textarea?.value);
+        demoComments.push(comment);
+        const item = document.createElement("li");
+        item.dataset.demoCommentId = comment.id;
+        item.textContent = comment.text;
+        list.append(item);
+        textarea.value = "";
+        if (status) status.textContent = blogCopy().commentAdded;
+      } catch (error) {
+        if (status) status.textContent = /no more than 2000/u.test(String(error?.message)) ? blogCopy().commentTooLong : blogCopy().commentTooShort;
+      }
+    });
+  }
+}
+
 for (const root of document.querySelectorAll("[data-blog-browse]")) initBrowse(root);
 initTagClouds();
 initAuthorDirectory();
+initArticleTools();
+initArticleToc();
+initDemoComments();

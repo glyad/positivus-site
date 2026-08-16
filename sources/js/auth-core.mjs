@@ -1,5 +1,11 @@
 export const minimumPasswordLength = 15;
 
+/** Accept only the fixed, local article path used by the comment demonstration. */
+export function safeReturnPath(value) {
+  const path = String(value ?? "");
+  return /^(?:he\/)?blog\/[a-z0-9]+(?:-[a-z0-9]+)*\/index\.html\?commenter=demo#comments$/u.test(path) ? path : "";
+}
+
 export function isValidEmail(value) {
   const email = value.trim();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email);

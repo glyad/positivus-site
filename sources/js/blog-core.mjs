@@ -9,6 +9,7 @@ const DIMENSIONS = {
 const DESKTOP_FILTER_FACETS = new Set(["category", "format", "audience", "level", "author", "duration", "from", "to"]);
 const TOKEN_BOUNDARY = /[^\p{L}\p{N}]+/u;
 const COMBINING_MARKS = /\p{M}+/gu;
+let demoCommentSequence = 0;
 
 function normalize(value) {
   return String(value ?? "")
@@ -72,6 +73,24 @@ export function parseBlogSearchState(search = "", documents) {
     sort,
     page: Number.isFinite(pageValue) ? Math.max(1, pageValue) : 1
   };
+}
+
+/** Select the UI-only discussion view without carrying account or comment data. */
+export function commentDemoState(search = "") {
+  const params = new URLSearchParams(String(search).split("#", 1)[0].replace(/^\?/u, ""));
+  return params.get("commenter") === "demo" && [...params.keys()].every((key) => key === "commenter") ? "signed-in" : "signed-out";
+}
+
+/** Create one comment for the current module and DOM lifetime only. */
+export function createDemoComment(text, { now = new Date() } = {}) {
+  const value = String(text ?? "").trim();
+  const length = [...value].length;
+  if (length < 2) throw new RangeError("Comment must contain at least 2 characters.");
+  if (length > 2000) throw new RangeError("Comment must contain no more than 2000 characters.");
+  const timestamp = new Date(now);
+  if (Number.isNaN(timestamp.getTime())) throw new TypeError("Comment timestamp must be valid.");
+  demoCommentSequence += 1;
+  return { id: `demo-comment-${demoCommentSequence}`, text: value, createdAt: timestamp.toISOString() };
 }
 
 function intersects(values, selection) {

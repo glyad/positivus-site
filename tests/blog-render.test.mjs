@@ -240,6 +240,25 @@ test("article pages expose the approved editorial hierarchy and prototype-only c
   assert.match(html, /data-demo-comments[^>]*data-prototype="true"/);
 });
 
+test("article pages render progressive article tools and the in-memory comment demonstration", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-article-tools-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const html = await readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8");
+  assert.match(html, /data-copy-link/);
+  assert.match(html, /data-print-article/);
+  assert.match(html, /data-article-tools-status[^>]*aria-live="polite"/);
+  assert.match(html, /data-article-toc[\s\S]*data-toc-current/);
+  assert.match(html, /data-demo-comment-sign-in[^>]*return=blog%2Fmarketing-dashboard%2Findex\.html%3Fcommenter%3Ddemo%23comments/);
+  assert.match(html, /data-demo-comment-preview[^>]*href="\?commenter=demo#comments"/);
+  assert.match(html, /data-demo-comment-form/);
+  assert.match(html, /data-demo-comment-list/);
+  assert.match(html, /data-demo-comment-status[^>]*aria-live="polite"/);
+  assert.match(html, /Demo comments are not published or stored\./);
+  assert.match(html, /textarea[^>]*minlength="2"[^>]*maxlength="2000"/);
+});
+
 test("browse starts with twelve stable cards and accessible numbered pagination", async () => {
   const model = await loadRepositoryBlogModel();
   const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-browse-"));

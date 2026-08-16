@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  commentDemoState,
+  createDemoComment,
   drawerFocusAction,
   filterAuthors,
   filterBlogDocuments,
@@ -90,4 +92,19 @@ test("applies desktop facet changes but not unrelated input events", () => {
 test("returns localized zero-result guidance with a clear-filters recovery action", () => {
   assert.deepEqual(noResultsRecovery("en"), { message: "No matching articles. Clear filters to browse every insight.", action: "Clear filters" });
   assert.deepEqual(noResultsRecovery("he"), { message: "לא נמצאו מאמרים תואמים. נקו מסננים כדי לעיין בכל התובנות.", action: "ניקוי מסננים" });
+});
+
+test("creates trimmed in-memory comments without identity data", () => {
+  const comment = createDemoComment("  Useful framework.  ", { now: new Date("2026-08-15T10:00:00Z") });
+  assert.equal(comment.text, "Useful framework.");
+  assert.equal(comment.createdAt, "2026-08-15T10:00:00.000Z");
+  assert.deepEqual(Object.keys(comment).sort(), ["createdAt", "id", "text"]);
+  assert.throws(() => createDemoComment(" "), /at least 2 characters/);
+  assert.throws(() => createDemoComment("x".repeat(2001)), /no more than 2000 characters/);
+});
+
+test("selects a comment preview only from the explicit demo query", () => {
+  assert.equal(commentDemoState("?commenter=demo#comments"), "signed-in");
+  assert.equal(commentDemoState("?commenter=Demo"), "signed-out");
+  assert.equal(commentDemoState("?commenter=demo&email=person@example.com"), "signed-out");
 });

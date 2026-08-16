@@ -85,6 +85,7 @@ const copy = {
   useEmailInstead: ["Use email instead", "שימוש באימייל במקום"],
   demoAccountTitle: ["Welcome to your demo account", "ברוכים הבאים לחשבון ההדגמה"],
   demoAccountBody: ["This is the end of the UI-only authentication journey. Explore the Positivus website or sign out to replay the flow.", "זהו סוף מסע ההתחברות בממשק ההדגמה. אפשר לעבור לאתר Positivus או להתנתק ולהתחיל מחדש."],
+  returnToArticle: ["Return to article", "חזרה למאמר"],
   exploreWebsite: ["Explore website", "מעבר לאתר"],
   signOut: ["Sign out", "התנתקות"],
   legalPrototype: ["Prototype copy — legal review required", "תוכן להדגמה — נדרשת בדיקה משפטית"],
@@ -369,7 +370,7 @@ const socialAuth = authCard({
     </div>
     <p class="auth-state-copy__lead" data-i18n="connectingProviderBody">${authText.connectingProviderBody.en}</p>
     <div class="auth-provider__actions" data-provider-actions hidden>
-      <a class="auth-submit" href="account.html">${text("continueDemo")}</a>
+      <a class="auth-submit" href="account.html" data-auth-account-link>${text("continueDemo")}</a>
       <a class="auth-back-link" href="sign-in.html">${text("cancel")}</a>
     </div>
   </div>
@@ -392,6 +393,7 @@ const account = authCard({
   body: `${stateArt("shield-check")}
     <p class="auth-state-copy__lead">${text("demoAccountBody")}</p>
     <div class="auth-button-row">
+      <a class="auth-submit" data-return-to-article hidden>${text("returnToArticle")}</a>
       <a class="auth-submit" href="index.html">${icon("home")}${text("exploreWebsite")}</a>
       <a class="auth-secondary" href="sign-in.html">${icon("sign-out")}${text("signOut")}</a>
     </div>`,

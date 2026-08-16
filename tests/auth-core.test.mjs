@@ -8,7 +8,8 @@ import {
   normalizeVerificationCode,
   passwordIssue,
   providerFromSearch,
-  providerStateFromSearch
+  providerStateFromSearch,
+  safeReturnPath
 } from "../sources/js/auth-core.mjs";
 
 test("email validation accepts normal addresses and rejects malformed input", () => {
@@ -47,4 +48,12 @@ test("social provider and state parameters use safe allowlists", () => {
 test("countdowns are localized and never become negative", () => {
   assert.equal(formatCountdown(45, "en"), "Resend available in 00:45");
   assert.equal(formatCountdown(-1, "he"), "אפשר לשלוח שוב בעוד 00:00");
+});
+
+test("allows only local blog article return paths", () => {
+  assert.equal(safeReturnPath("blog/seo-audit/index.html?commenter=demo#comments"), "blog/seo-audit/index.html?commenter=demo#comments");
+  assert.equal(safeReturnPath("he/blog/audit-seo/index.html?commenter=demo#comments"), "he/blog/audit-seo/index.html?commenter=demo#comments");
+  assert.equal(safeReturnPath("https://example.com"), "");
+  assert.equal(safeReturnPath("javascript:alert(1)"), "");
+  assert.equal(safeReturnPath("blog/seo-audit/index.html?commenter=other#comments"), "");
 });
