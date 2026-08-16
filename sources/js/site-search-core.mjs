@@ -1,6 +1,18 @@
 const RESULT_TYPES = ["page", "service", "case-study", "article", "author"];
 const TOKEN_BOUNDARY = /[^\p{L}\p{N}]+/u;
 const COMBINING_MARKS = /\p{M}+/gu;
+const RECOVERY_COPY = {
+  en: {
+    noResults: "No matching results. Check your spelling, explore related topics or our services, or visit the Blog.",
+    unavailable: "Search is unavailable right now. Use the links below to continue.",
+    fallback: "Search page", topics: "Related topics", services: "Services", blog: "Blog"
+  },
+  he: {
+    noResults: "לא נמצאו תוצאות תואמות. בדקו את האיות, הכירו נושאים קשורים או את השירותים שלנו, או עברו לבלוג.",
+    unavailable: "החיפוש אינו זמין כרגע. אפשר להשתמש בקישורים שלמטה כדי להמשיך.",
+    fallback: "דף החיפוש", topics: "נושאים קשורים", services: "שירותים", blog: "בלוג"
+  }
+};
 
 /** Normalize text for locale-independent Latin and Hebrew search comparisons. */
 export function normalizeSearchText(value) {
@@ -64,4 +76,25 @@ export function groupSiteResults(results) {
     if (entries.length) groups.set(type, entries);
   }
   return groups;
+}
+
+/** Return localized, route-backed recovery guidance without using query history. */
+export function siteSearchRecoveryGuidance(locale, routes = {}) {
+  const text = RECOVERY_COPY[locale === "he" ? "he" : "en"];
+  const action = (id, label) => ({ id, label, href: String(routes[id] ?? "") });
+  return {
+    noResults: {
+      message: text.noResults,
+      actions: [action("topics", text.topics), action("services", text.services), action("blog", text.blog)]
+    },
+    unavailable: {
+      message: text.unavailable,
+      actions: [action("fallback", text.fallback), action("topics", text.topics), action("services", text.services), action("blog", text.blog)]
+    }
+  };
+}
+
+/** Keep static form submission available until progressive data is loaded. */
+export function shouldInterceptSiteSearchSubmit({ canEnhance, indexLoaded }) {
+  return canEnhance === true && indexLoaded === true;
 }

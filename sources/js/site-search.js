@@ -1,21 +1,20 @@
-import { groupSiteResults, searchSiteDocuments } from "./site-search-core.mjs";
+import {
+  groupSiteResults,
+  searchSiteDocuments,
+  siteSearchRecoveryGuidance,
+  shouldInterceptSiteSearchSubmit
+} from "./site-search-core.mjs";
 
 const copy = {
   en: {
     curated: "Popular resources",
     resultCount: (count) => `${count} result${count === 1 ? "" : "s"}`,
-    noResults: "No matching results. Check your spelling, explore our services, or visit the Blog.",
-    unavailable: "Search is unavailable right now. Please use the links below.",
-    types: { page: "Pages", service: "Services", "case-study": "Case studies", article: "Articles", author: "Authors" },
-    blog: "Blog"
+    types: { page: "Pages", service: "Services", "case-study": "Case studies", article: "Articles", author: "Authors" }
   },
   he: {
     curated: "משאבים מומלצים",
     resultCount: (count) => `${count} תוצאות`,
-    noResults: "לא נמצאו תוצאות תואמות. בדקו את האיות, הכירו את השירותים שלנו או עברו לבלוג.",
-    unavailable: "החיפוש אינו זמין כרגע. אפשר להשתמש בקישורים שלמטה.",
-    types: { page: "עמודים", service: "שירותים", "case-study": "מקרי בוחן", article: "מאמרים", author: "כותבים" },
-    blog: "בלוג"
+    types: { page: "עמודים", service: "שירותים", "case-study": "מקרי בוחן", article: "מאמרים", author: "כותבים" }
   }
 };
 
@@ -44,6 +43,32 @@ if (dialog && input && resultsRegion && status && triggers.length) {
     resultsRegion.replaceChildren();
   }
 
+  function recoveryRoutes() {
+    const resolveRoute = (value) => new URL(value ?? "", document.baseURI).href;
+    return {
+      fallback: resolveRoute(searchForm?.getAttribute("action")),
+      topics: resolveRoute(dialog.dataset.siteSearchTopics),
+      services: resolveRoute(dialog.dataset.siteSearchServices),
+      blog: resolveRoute(dialog.dataset.siteSearchBlog)
+    };
+  }
+
+  function renderRecovery(kind) {
+    const guidance = siteSearchRecoveryGuidance(locale, recoveryRoutes())[kind];
+    clearResults();
+    status.textContent = guidance.message;
+    const actions = document.createElement("ul");
+    for (const action of guidance.actions) {
+      const item = document.createElement("li");
+      const link = document.createElement("a");
+      link.href = action.href;
+      link.textContent = action.label;
+      item.append(link);
+      actions.append(item);
+    }
+    resultsRegion.append(actions);
+  }
+
   function createLink(result) {
     const link = document.createElement("a");
     link.href = new URL(result.href ?? "", indexUrl ?? document.baseURI).href;
@@ -59,16 +84,10 @@ if (dialog && input && resultsRegion && status && triggers.length) {
     clearResults();
     const found = searchSiteDocuments(documents ?? [], query, { limit: 12 });
     const groups = groupSiteResults(found);
-    status.textContent = query.trim() ? (found.length ? text().resultCount(found.length) : text().noResults) : text().curated;
+    status.textContent = query.trim() ? (found.length ? text().resultCount(found.length) : "") : text().curated;
 
     if (!found.length && query.trim()) {
-      const guidance = document.createElement("p");
-      guidance.textContent = text().noResults;
-      const blog = document.createElement("a");
-      blog.href = new URL(searchForm?.action ?? document.baseURI, document.baseURI).href;
-      blog.textContent = text().blog;
-      guidance.append(" ", blog);
-      resultsRegion.append(guidance);
+      renderRecovery("noResults");
       return;
     }
 
@@ -109,7 +128,7 @@ if (dialog && input && resultsRegion && status && triggers.length) {
       await loadIndex();
       renderResults(input.value);
     } catch {
-      status.textContent = text().unavailable;
+      renderRecovery("unavailable");
     }
   }
 
@@ -118,6 +137,9 @@ if (dialog && input && resultsRegion && status && triggers.length) {
     dialog.dataset.siteSearchIndex = dialog.dataset[`siteSearchIndex${locale === "he" ? "He" : "En"}`] ?? dialog.dataset.siteSearchIndex;
     const fallback = dialog.dataset[`siteSearchFallback${locale === "he" ? "He" : "En"}`];
     if (fallback && searchForm) searchForm.action = fallback;
+    for (const name of ["Topics", "Services", "Blog"]) {
+      dialog.dataset[`siteSearch${name}`] = dialog.dataset[`siteSearch${name}${locale === "he" ? "He" : "En"}`] ?? dialog.dataset[`siteSearch${name}`];
+    }
     for (const item of triggers) {
       if (fallback) item.href = fallback;
       item.setAttribute("aria-label", locale === "he" ? "חיפוש בפוזיטיבוס" : "Search Positivus");
@@ -126,7 +148,7 @@ if (dialog && input && resultsRegion && status && triggers.length) {
     indexUrl = null;
     if (dialog.open) {
       void loadIndex().then(() => renderResults(input.value)).catch(() => {
-        status.textContent = text().unavailable;
+        renderRecovery("unavailable");
       });
     }
   }
@@ -146,9 +168,9 @@ if (dialog && input && resultsRegion && status && triggers.length) {
   });
 
   searchForm?.addEventListener("submit", (event) => {
-    if (!canEnhance) return;
+    if (!shouldInterceptSiteSearchSubmit({ canEnhance, indexLoaded: Array.isArray(documents) })) return;
     event.preventDefault();
-    if (documents) renderResults(input.value);
+    renderResults(input.value);
   });
 
   dialog.addEventListener("close", () => {

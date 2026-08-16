@@ -4,7 +4,9 @@ import test from "node:test";
 import {
   groupSiteResults,
   normalizeSearchText,
-  searchSiteDocuments
+  searchSiteDocuments,
+  siteSearchRecoveryGuidance,
+  shouldInterceptSiteSearchSubmit
 } from "../sources/js/site-search-core.mjs";
 
 test("normalizes equivalent Latin text while preserving Hebrew letters", () => {
@@ -64,4 +66,26 @@ test("groups result types in the shared navigation order", () => {
 
   assert.deepEqual([...groups.keys()], ["page", "service", "case-study", "article", "author"]);
   assert.deepEqual(groups.get("case-study").map((entry) => entry.id), ["case"]);
+});
+
+test("provides localized no-results recovery actions including related topics", () => {
+  const routes = {
+    fallback: "search/index.html",
+    topics: "blog/tags/index.html",
+    services: "index.html#services",
+    blog: "blog/index.html"
+  };
+
+  assert.deepEqual(siteSearchRecoveryGuidance("en", routes).noResults.actions, [
+    { id: "topics", label: "Related topics", href: "blog/tags/index.html" },
+    { id: "services", label: "Services", href: "index.html#services" },
+    { id: "blog", label: "Blog", href: "blog/index.html" }
+  ]);
+  assert.equal(siteSearchRecoveryGuidance("he", routes).noResults.actions[0].label, "נושאים קשורים");
+});
+
+test("only intercepts enhanced search submission after the index has loaded", () => {
+  assert.equal(shouldInterceptSiteSearchSubmit({ canEnhance: true, indexLoaded: true }), true);
+  assert.equal(shouldInterceptSiteSearchSubmit({ canEnhance: true, indexLoaded: false }), false);
+  assert.equal(shouldInterceptSiteSearchSubmit({ canEnhance: false, indexLoaded: true }), false);
 });

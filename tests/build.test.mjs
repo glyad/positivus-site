@@ -40,6 +40,8 @@ test("build creates the deployable static site", async () => {
   assert.match(html, /href="search\/index\.html" data-site-search-open/);
   assert.match(html, /data-site-search-dialog/);
   assert.match(html, /data-site-search-index="search-index-en\.json"/);
+  assert.match(html, /data-site-search-topics-en="blog\/tags\/index\.html"/);
+  assert.match(html, /data-site-search-services-en="index\.html#services"/);
   assert.match(html, /Request a quote/);
 
   const authHtml = await readFile(resolve(outputDir, "sign-up.html"), "utf8");
@@ -53,6 +55,7 @@ test("build creates the deployable static site", async () => {
   assert.match(blogHtml, /<form action="search\/index\.html" method="get" role="search"/);
   assert.match(blogHtml, /data-site-search-dialog/);
   assert.match(blogHtml, /data-site-search-index="\.\.\/\.\.\/search-index-he\.json"/);
+  assert.match(blogHtml, /data-site-search-topics-he="tags\/index\.html"/);
   assert.match(blogHtml, /Request a quote|בקשת הצעת מחיר/);
   assert.doesNotMatch(blogHtml, /%%/);
 

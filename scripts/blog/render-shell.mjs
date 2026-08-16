@@ -95,6 +95,12 @@ function renderHeader({ locale, outputPath, alternatePath }) {
   const searchIndexHe = linkTo(outputPath, "search-index-he.json");
   const searchFallbackEn = linkTo(outputPath, "search/index.html");
   const searchFallbackHe = linkTo(outputPath, "he/search/index.html");
+  const topics = linkTo(outputPath, locale === "he" ? "he/blog/tags/index.html" : "blog/tags/index.html");
+  const topicsEn = linkTo(outputPath, "blog/tags/index.html");
+  const topicsHe = linkTo(outputPath, "he/blog/tags/index.html");
+  const services = linkTo(outputPath, "index.html", "#services");
+  const blogEn = linkTo(outputPath, "blog/index.html");
+  const blogHe = linkTo(outputPath, "he/blog/index.html");
   const signIn = linkTo(outputPath, "sign-in.html");
   const peer = alternatePath === null ? null : linkTo(outputPath, `${safeCanonicalPath(alternatePath, "alternatePath")}index.html`);
   const label = locale === "he" ? "English" : "עברית";
@@ -116,7 +122,7 @@ function renderHeader({ locale, outputPath, alternatePath }) {
       ${peer ? `<a class="language-toggle" href="${escapeAttribute(peer)}" lang="${locale === "he" ? "en" : "he"}">${escapeHtml(label)}</a>` : ""}
     </nav>
   </div>
-  <dialog data-site-search-dialog data-site-search-index="${escapeAttribute(searchIndex)}" data-site-search-index-en="${escapeAttribute(searchIndexEn)}" data-site-search-index-he="${escapeAttribute(searchIndexHe)}" data-site-search-fallback-en="${escapeAttribute(searchFallbackEn)}" data-site-search-fallback-he="${escapeAttribute(searchFallbackHe)}" aria-labelledby="site-search-title">
+  <dialog data-site-search-dialog data-site-search-index="${escapeAttribute(searchIndex)}" data-site-search-index-en="${escapeAttribute(searchIndexEn)}" data-site-search-index-he="${escapeAttribute(searchIndexHe)}" data-site-search-fallback-en="${escapeAttribute(searchFallbackEn)}" data-site-search-fallback-he="${escapeAttribute(searchFallbackHe)}" data-site-search-topics="${escapeAttribute(topics)}" data-site-search-topics-en="${escapeAttribute(topicsEn)}" data-site-search-topics-he="${escapeAttribute(topicsHe)}" data-site-search-services="${escapeAttribute(services)}" data-site-search-services-en="${escapeAttribute(services)}" data-site-search-services-he="${escapeAttribute(services)}" data-site-search-blog="${escapeAttribute(blog)}" data-site-search-blog-en="${escapeAttribute(blogEn)}" data-site-search-blog-he="${escapeAttribute(blogHe)}" aria-labelledby="site-search-title">
     <form method="dialog"><button type="submit" aria-label="${escapeAttribute(text.close)}">×</button></form>
     <h2 id="site-search-title">${escapeHtml(text.searchTitle)}</h2>
     <form action="${escapeAttribute(search)}" method="get" role="search"><label for="site-search-input">${escapeHtml(text.searchLabel)}</label><input id="site-search-input" name="q" type="search" data-site-search-input /><button type="submit">${escapeHtml(text.search)}</button></form>
