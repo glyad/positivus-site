@@ -113,6 +113,29 @@ test("rejects deeply encoded and malformed percent sequences in local assets", (
   );
 });
 
+test("rejects controls, queries, and fragments in every local asset entry point", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.articles[0].hero.src = "assets/\n../private.webp";
+  invalid.authors[0].portrait = "assets/images/team/team-1.webp?preview";
+  invalid.articles[0].locales.en.blocks = [{
+    type: "figure",
+    src: "assets/images/team/team-1.webp#hero",
+    alt: "Unsafe asset path"
+  }];
+  invalid.categories[0].artwork = "assets/images/team/team-1.webp\u0000";
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) =>
+      error instanceof AggregateError &&
+      error.errors.some((entry) => /seo-audit.*hero\.src/.test(entry.message)) &&
+      error.errors.some((entry) => /maya-chen.*portrait/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*en.*blocks\[0\]\.src/.test(entry.message)) &&
+      error.errors.some((entry) => /seo.*artwork/.test(entry.message))
+  );
+  assert.doesNotThrow(() => createBlogModel(validRaw));
+});
+
 test("creates lookup indexes and derived reading time", () => {
   const model = createBlogModel(validRaw, { now: new Date("2026-08-15T00:00:00Z") });
   assert.deepEqual(model.byId.article.get("seo-audit").readingMinutes, { en: 1, he: 1 });

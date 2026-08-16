@@ -70,14 +70,12 @@ function createErrorCollector() {
 }
 
 function isSafeAssetPath(value) {
-  if (typeof value !== "string" || value.includes("%")) return false;
+  if (typeof value !== "string") return false;
   const segments = value.split("/");
-  return value.startsWith("assets/") &&
-    !value.includes("\\") &&
-    !value.includes("://") &&
-    !value.startsWith("/") &&
-    segments.length > 1 &&
-    segments.every((segment, index) => index === 0 || (segment !== "" && segment !== "." && segment !== ".."));
+  return segments.length > 1 &&
+    segments[0] === "assets" &&
+    segments.every((segment, index) => index === 0 ||
+      (segment !== "." && segment !== ".." && /^[A-Za-z0-9_.-]+$/u.test(segment)));
 }
 
 function isSafeLink(value) {
