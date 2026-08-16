@@ -109,6 +109,17 @@ test("renders a consultation only for its resolved service relationship", () => 
   assert.equal(renderBlocks([{ type: "consultation", serviceId: "seo" }], { locale: "en", resolveAsset, consultation: null }), "");
 });
 
+test("omits citation blocks that have no valid linked entries", () => {
+  const options = { locale: "en", resolveAsset, consultation: null };
+
+  assert.equal(renderBlocks([{ type: "citations", heading: "Sources", citations: [] }], options), "");
+  assert.equal(renderBlocks([{
+    type: "citations",
+    heading: "Sources",
+    citations: [{ label: "Unsafe", href: "javascript:alert(1)" }, { label: "Missing URL" }]
+  }], options), "");
+});
+
 test("rejects malformed optional values, unsafe links, and unsafe asset resolutions", () => {
   const html = renderBlocks([
     { type: "table", columns: "not an array", rows: [["<img src=x onerror=alert(1)>"]] },

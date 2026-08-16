@@ -189,7 +189,7 @@ function renderCitations(block) {
     const link = renderLink(citation.href ?? citation.url, citation.label);
     return link ? "<li>" + link + "</li>" : "";
   }).filter(Boolean).join("");
-  return section("citations", heading(block.heading) + (citations ? "<ol>" + citations + "</ol>" : ""));
+  return citations ? section("citations", heading(block.heading) + "<ol>" + citations + "</ol>") : "";
 }
 
 const CALLOUT_TONES = {
