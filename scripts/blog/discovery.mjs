@@ -205,8 +205,14 @@ function outputPathForInternalPath(path, siteOrigin, name) {
   const destination = new URL(path, siteOrigin);
   const base = new URL(siteOrigin).pathname.replace(/\/$/u, "");
   if (!destination.pathname.startsWith(`${base}/`)) throw new TypeError(`${name} must be inside the site base path`);
+  if (destination.search || destination.hash || destination.pathname.includes("%")) throw new TypeError(`${name} must be a clean public page path`);
   const relative = destination.pathname.slice(base.length + 1).replace(/\/$/u, "");
-  if (!relative || relative.split("/").some((part) => !part || part === "." || part === "..")) throw new TypeError(`${name} must identify a safe page`);
+  if (!relative) return "index.html";
+  const parts = relative.split("/");
+  if (parts.some((part) => !/^[A-Za-z0-9_-]+$/u.test(part))) {
+    if (parts.length === 1 && /^[A-Za-z0-9][A-Za-z0-9_.-]*\.html$/u.test(relative)) return relative;
+    throw new TypeError(`${name} must identify a safe page`);
+  }
   return `${relative}/index.html`;
 }
 

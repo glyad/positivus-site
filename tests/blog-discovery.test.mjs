@@ -172,3 +172,73 @@ test("rejects duplicate redirect source paths before either document can overwri
   );
   await assert.rejects(readFile(resolve(outputDir, "blog/retired-guide/index.html"), "utf8"));
 });
+
+test("accepts a redirect replacement targeting an emitted flat HTML page", async () => {
+  const model = structuredClone(await loadRepositoryBlogModel());
+  const siteDocuments = await loadRepositorySiteDocuments();
+  model.articles[0].redirect = {
+    locale: "en",
+    oldPath: "/positivus-site/blog/retired-guide/",
+    replacementPath: "/positivus-site/sign-in.html",
+    statusCode: 301,
+    reason: "Moved"
+  };
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-flat-target-"));
+
+  const paths = await emitDiscoveryArtifacts({
+    model,
+    siteDocuments,
+    outputDir,
+    siteOrigin: model.settings.siteOrigin,
+    publicRoutePaths: ["index.html", "sign-in.html"]
+  });
+
+  assert.ok(paths.includes("blog/retired-guide/index.html"));
+});
+
+test("accepts a redirect replacement targeting the emitted site root", async () => {
+  const model = structuredClone(await loadRepositoryBlogModel());
+  const siteDocuments = await loadRepositorySiteDocuments();
+  model.articles[0].redirect = {
+    locale: "en",
+    oldPath: "/positivus-site/blog/retired-guide/",
+    replacementPath: "/positivus-site/",
+    statusCode: 301,
+    reason: "Moved"
+  };
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-root-target-"));
+
+  const paths = await emitDiscoveryArtifacts({
+    model,
+    siteDocuments,
+    outputDir,
+    siteOrigin: model.settings.siteOrigin,
+    publicRoutePaths: ["index.html", "sign-in.html"]
+  });
+
+  assert.ok(paths.includes("blog/retired-guide/index.html"));
+});
+
+test("rejects a redirect source that collides with an emitted flat HTML page", async () => {
+  const model = structuredClone(await loadRepositoryBlogModel());
+  const siteDocuments = await loadRepositorySiteDocuments();
+  model.articles[0].redirect = {
+    locale: "en",
+    oldPath: "/positivus-site/sign-in.html",
+    replacementPath: "/positivus-site/",
+    statusCode: 301,
+    reason: "Moved"
+  };
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-flat-source-"));
+
+  await assert.rejects(
+    emitDiscoveryArtifacts({
+      model,
+      siteDocuments,
+      outputDir,
+      siteOrigin: model.settings.siteOrigin,
+      publicRoutePaths: ["index.html", "sign-in.html"]
+    }),
+    /redirect oldPath collides with an emitted public route/
+  );
+});
