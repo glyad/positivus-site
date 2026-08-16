@@ -4,6 +4,7 @@ const DEFAULT_SITE_ORIGIN = "https://glyad.github.io/positivus-site";
 
 const copy = {
   en: {
+    brandHome: "Positivus home",
     home: "Home",
     services: "Services",
     useCases: "Use Cases",
@@ -20,6 +21,7 @@ const copy = {
     footer: "Positivus — practical marketing for sustainable growth."
   },
   he: {
+    brandHome: "דף הבית של פוזיטיבוס",
     home: "דף הבית",
     services: "שירותים",
     useCases: "מקרי שימוש",
@@ -62,10 +64,12 @@ function siteUrl(siteOrigin, path) {
   } catch {
     throw new TypeError("siteOrigin must be a valid HTTPS URL");
   }
-  if (origin.protocol !== "https:" || origin.username || origin.password || origin.search || origin.hash || origin.pathname.endsWith("/")) {
+  const isRootOrigin = origin.pathname === "/";
+  if (origin.protocol !== "https:" || origin.username || origin.password || origin.search || origin.hash || (!isRootOrigin && origin.pathname.endsWith("/"))) {
     throw new TypeError("siteOrigin must be a canonical HTTPS origin or base URL");
   }
-  return `${origin.toString()}/${safeCanonicalPath(path, "canonical path")}`;
+  const baseUrl = isRootOrigin ? origin.origin : `${origin.origin}${origin.pathname}`;
+  return `${baseUrl}/${safeCanonicalPath(path, "canonical path")}`;
 }
 
 function linkTo(outputPath, targetOutputPath, fragment = "") {
@@ -83,7 +87,7 @@ function renderHeader({ locale, outputPath, alternatePath }) {
 
   return `<header class="site-header blog-site-header">
   <div class="site-header__inner shell">
-    <a class="brand" href="${escapeAttribute(home)}" aria-label="Positivus home"><span class="brand__mark icon-mask icon-mask--star" aria-hidden="true"></span><span class="brand__name">Positivus</span></a>
+    <a class="brand" href="${escapeAttribute(home)}" aria-label="${escapeAttribute(text.brandHome)}"><span class="brand__mark icon-mask icon-mask--star" aria-hidden="true"></span><span class="brand__name">Positivus</span></a>
     <nav class="site-nav" aria-label="${escapeAttribute(text.navigation)}">
       <ul class="site-nav__list">
         <li><a href="${escapeAttribute(home)}">${escapeHtml(text.home)}</a></li>
