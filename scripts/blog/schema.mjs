@@ -70,12 +70,24 @@ function createErrorCollector() {
 }
 
 function isSafeAssetPath(value) {
-  return typeof value === "string" &&
-    value.startsWith("assets/") &&
-    !value.includes("\\") &&
-    !value.split("/").includes("..") &&
-    !value.includes("://") &&
-    !value.startsWith("/");
+  if (typeof value !== "string") return false;
+  let decoded = value;
+  try {
+    for (let index = 0; index < 4; index += 1) {
+      const next = decodeURIComponent(decoded);
+      if (next === decoded) break;
+      decoded = next;
+    }
+  } catch {
+    return false;
+  }
+  const segments = decoded.split("/");
+  return decoded.startsWith("assets/") &&
+    !decoded.includes("\\") &&
+    !decoded.includes("://") &&
+    !decoded.startsWith("/") &&
+    segments.length > 1 &&
+    segments.every((segment, index) => index === 0 || (segment !== "" && segment !== "." && segment !== ".."));
 }
 
 function isSafeLink(value) {

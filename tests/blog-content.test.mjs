@@ -71,6 +71,26 @@ test("rejects malformed blog settings IDs with contextual aggregate errors", () 
   );
 });
 
+test("rejects percent-encoded traversal in hero, portrait, and nested block assets", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.articles[0].hero.src = "assets/%2e%2e/private.webp";
+  invalid.authors[0].portrait = "assets/%2Fprivate.webp";
+  invalid.articles[0].locales.en.blocks = [{
+    type: "figure",
+    src: "assets/%5cprivate.webp",
+    alt: "Unsafe asset path"
+  }];
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) =>
+      error instanceof AggregateError &&
+      error.errors.some((entry) => /seo-audit.*hero\.src/.test(entry.message)) &&
+      error.errors.some((entry) => /maya-chen.*portrait/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*en.*blocks\[0\]\.src/.test(entry.message))
+  );
+});
+
 test("creates lookup indexes and derived reading time", () => {
   const model = createBlogModel(validRaw, { now: new Date("2026-08-15T00:00:00Z") });
   assert.deepEqual(model.byId.article.get("seo-audit").readingMinutes, { en: 1, he: 1 });
