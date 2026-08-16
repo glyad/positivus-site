@@ -3,6 +3,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { authNavigation, authPages, authText } from "../sources/js/auth-content.mjs";
+import { loadLocalBlogSource } from "./blog/local-json-adapter.mjs";
+import { renderBlogSite } from "./blog/render-site.mjs";
+import { createBlogModel } from "./blog/schema.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 export const repositoryRoot = resolve(dirname(scriptPath), "..");
@@ -16,6 +19,10 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
   const authTemplate = await readFile(
     resolve(sourceDir, "auth-template.html"),
     "utf8"
+  );
+  const blogModel = createBlogModel(
+    await loadLocalBlogSource({ sourceDir }),
+    { now: new Date() }
   );
 
   await rm(outputDir, { force: true, recursive: true });
@@ -50,12 +57,27 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
     resolve(outputDir, "css", "main.css"),
     `/* Generated from sources/scss/main.scss. */\n${stylesheet}`
   );
+  const blogStylesheet = await readFile(
+    resolve(sourceDir, "scss", "blog.scss"),
+    "utf8"
+  );
+  await writeFile(
+    resolve(outputDir, "css", "blog.css"),
+    `/* Generated from sources/scss/blog.scss. */\n${blogStylesheet}`
+  );
+
+  const blogEntrypoints = await renderBlogSite({
+    model: blogModel,
+    sourceDir,
+    outputDir,
+    version: packageMetadata.version,
+  });
 
   const manifest = {
     name: packageMetadata.name,
     version: packageMetadata.version,
     entrypoint: "index.html",
-    entrypoints: ["index.html", ...authPages.map((page) => page.filename)],
+    entrypoints: ["index.html", ...authPages.map((page) => page.filename), ...blogEntrypoints],
     source: "sources",
   };
 

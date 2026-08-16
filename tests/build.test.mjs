@@ -15,9 +15,12 @@ test("build creates the deployable static site", async () => {
     "verify-email.html",
     "account.html",
     "css/main.css",
+    "css/blog.css",
     "js/main.js",
     "js/auth.js",
     "assets/images/decor/contact-illustration.svg",
+    "blog/index.html",
+    "he/blog/index.html",
     "manifest.json",
   ]) {
     assert.equal((await stat(resolve(outputDir, file))).isFile(), true);
@@ -34,6 +37,12 @@ test("build creates the deployable static site", async () => {
   assert.match(authHtml, /data-auth-page="sign-up"/);
   assert.match(authHtml, /autocomplete="new-password"/);
   assert.doesNotMatch(authHtml, /%%(?:TITLE|PAGE|AUTH_NAV|CONTENT)%%/);
+
+  const blogHtml = await readFile(resolve(outputDir, "he/blog/index.html"), "utf8");
+  assert.match(blogHtml, /lang="he" dir="rtl"/);
+  assert.match(blogHtml, /href="\.\.\/\.\.\/css\/blog\.css"/);
+  assert.match(blogHtml, /<form action="search\/index\.html" method="get" role="search"/);
+  assert.doesNotMatch(blogHtml, /%%/);
 });
 
 test("build manifest tracks the package version", async () => {
@@ -48,4 +57,6 @@ test("build manifest tracks the package version", async () => {
   assert.equal(manifest.version, packageMetadata.version);
   assert.ok(manifest.entrypoints.includes("sign-in.html"));
   assert.ok(manifest.entrypoints.includes("privacy.html"));
+  assert.ok(manifest.entrypoints.includes("blog/index.html"));
+  assert.ok(manifest.entrypoints.includes("he/blog/index.html"));
 });
