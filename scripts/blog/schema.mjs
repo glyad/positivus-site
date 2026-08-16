@@ -194,9 +194,12 @@ function validateSettingsLocation(settings, id, collector) {
     return;
   }
 
+  const expectedSiteOrigin = hasSafeBasePath
+    ? `${siteUrl.origin}${basePath === "/" ? "" : basePath.slice(0, -1)}`
+    : null;
   if (siteUrl.protocol !== "https:" || siteUrl.username || siteUrl.password ||
       siteUrl.search || siteUrl.hash || siteUrl.pathname.includes("%") ||
-      !hasSafeBasePath || siteUrl.pathname !== (basePath === "/" ? "/" : basePath.slice(0, -1))) {
+      !hasSafeBasePath || settings.siteOrigin !== expectedSiteOrigin) {
     collector.add(id, "record", "settings.siteOrigin", "must be a canonical HTTPS site origin matching basePath");
   }
 }
