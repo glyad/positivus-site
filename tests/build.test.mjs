@@ -85,6 +85,25 @@ test("blog pages load the editorial stylesheet after shared styles without leaki
   assert.match(blogStyles, /@media\s+print/);
 });
 
+test("Blog shell keeps closed search hidden and renders compact navigation and TOC controls", async () => {
+  const outputDir = await buildSite();
+  const [blogHtml, articleHtml, blogStyles] = await Promise.all([
+    readFile(resolve(outputDir, "blog/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/seo-audit-90-minutes/index.html"), "utf8"),
+    readFile(resolve(outputDir, "css/blog.css"), "utf8")
+  ]);
+
+  assert.match(blogHtml, /data-menu-toggle[^>]*aria-controls="blog-site-navigation"/);
+  assert.match(blogHtml, /<nav class="site-nav" id="blog-site-navigation"[^>]*data-nav/);
+  assert.match(blogHtml, /data-nav-backdrop/);
+  assert.match(articleHtml, /<details data-article-toc open><summary>[^<]+<\/summary>/);
+  assert.match(blogStyles, /\[data-site-search-dialog\]:not\(\[open\]\)\s*\{\s*display:\s*none/);
+  assert.match(blogStyles, /\[data-site-search-dialog\]\[open\]\s*\{\s*display:\s*grid/);
+  assert.match(blogStyles, /\[data-series-entries\]\s*\{[\s\S]*display:\s*grid/);
+  assert.match(blogStyles, /\[data-active-filters\] button\s*\{[\s\S]*min-block-size:\s*44px/);
+  assert.match(blogStyles, /\.article-block--faq summary\s*\{[\s\S]*min-block-size:\s*44px/);
+});
+
 test("build manifest tracks the package version", async () => {
   await buildSite();
   const manifest = JSON.parse(

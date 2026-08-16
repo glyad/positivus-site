@@ -320,6 +320,32 @@ function initArticleToc() {
   for (const section of sections) observer.observe(section);
 }
 
+function initBlogNavigation() {
+  const toggle = document.querySelector("[data-menu-toggle]");
+  const navigation = document.querySelector("[data-nav]");
+  const backdrop = document.querySelector("[data-nav-backdrop]");
+  if (!toggle || !navigation || !backdrop) return;
+
+  const labels = locale() === "he"
+    ? { open: "פתיחת הניווט", close: "סגירת הניווט" }
+    : { open: "Open navigation", close: "Close navigation" };
+  const setOpen = (open, { restoreFocus = false } = {}) => {
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.setAttribute("aria-label", open ? labels.close : labels.open);
+    navigation.classList.toggle("is-open", open);
+    backdrop.classList.toggle("is-open", open);
+    document.body.classList.toggle("nav-open", open);
+    if (!open && restoreFocus) toggle.focus();
+  };
+
+  toggle.addEventListener("click", () => setOpen(toggle.getAttribute("aria-expanded") !== "true"));
+  backdrop.addEventListener("click", () => setOpen(false));
+  navigation.querySelectorAll("a").forEach((link) => link.addEventListener("click", () => setOpen(false)));
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape" && toggle.getAttribute("aria-expanded") === "true") setOpen(false, { restoreFocus: true });
+  });
+}
+
 const demoComments = [];
 
 function initDemoComments() {
@@ -357,4 +383,5 @@ initTagClouds();
 initAuthorDirectory();
 initArticleTools();
 initArticleToc();
+initBlogNavigation();
 initDemoComments();

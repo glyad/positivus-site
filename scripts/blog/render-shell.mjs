@@ -15,6 +15,9 @@ const copy = {
     signIn: "Sign in",
     skip: "Skip to content",
     navigation: "Primary navigation",
+    openNavigation: "Open navigation",
+    closeNavigation: "Close navigation",
+    dismissNavigation: "Dismiss navigation overlay",
     searchTitle: "Search Positivus",
     searchLabel: "Search the Positivus site",
     close: "Close search",
@@ -32,6 +35,9 @@ const copy = {
     signIn: "כניסה",
     skip: "דלגו לתוכן",
     navigation: "ניווט ראשי",
+    openNavigation: "פתיחת הניווט",
+    closeNavigation: "סגירת הניווט",
+    dismissNavigation: "סגירת שכבת הניווט",
     searchTitle: "חיפוש בפוזיטיבוס",
     searchLabel: "חיפוש באתר פוזיטיבוס",
     close: "סגירת החיפוש",
@@ -108,7 +114,8 @@ function renderHeader({ locale, outputPath, alternatePath }) {
   return `<header class="site-header blog-site-header">
   <div class="site-header__inner shell">
     <a class="brand" href="${escapeAttribute(home)}" aria-label="${escapeAttribute(text.brandHome)}"><span class="brand__mark icon-mask icon-mask--star" aria-hidden="true"></span><span class="brand__name">Positivus</span></a>
-    <nav class="site-nav" aria-label="${escapeAttribute(text.navigation)}">
+    <button class="menu-toggle" type="button" data-menu-toggle aria-controls="blog-site-navigation" aria-label="${escapeAttribute(text.openNavigation)}" aria-expanded="false"><span class="menu-toggle__icon icon-mask icon-mask--menu" aria-hidden="true"></span></button>
+    <nav class="site-nav" id="blog-site-navigation" data-nav aria-label="${escapeAttribute(text.navigation)}">
       <ul class="site-nav__list">
         <li><a href="${escapeAttribute(home)}">${escapeHtml(text.home)}</a></li>
         <li><a href="${escapeAttribute(`${home}#services`)}">${escapeHtml(text.services)}</a></li>
@@ -122,6 +129,7 @@ function renderHeader({ locale, outputPath, alternatePath }) {
       ${peer ? `<a class="language-toggle" href="${escapeAttribute(peer)}" lang="${locale === "he" ? "en" : "he"}">${escapeHtml(label)}</a>` : ""}
     </nav>
   </div>
+  <button class="nav-backdrop" type="button" data-nav-backdrop aria-label="${escapeAttribute(text.dismissNavigation)}"></button>
   <dialog data-site-search-dialog data-site-search-index="${escapeAttribute(searchIndex)}" data-site-search-index-en="${escapeAttribute(searchIndexEn)}" data-site-search-index-he="${escapeAttribute(searchIndexHe)}" data-site-search-fallback-en="${escapeAttribute(searchFallbackEn)}" data-site-search-fallback-he="${escapeAttribute(searchFallbackHe)}" data-site-search-topics="${escapeAttribute(topics)}" data-site-search-topics-en="${escapeAttribute(topicsEn)}" data-site-search-topics-he="${escapeAttribute(topicsHe)}" data-site-search-services="${escapeAttribute(services)}" data-site-search-services-en="${escapeAttribute(services)}" data-site-search-services-he="${escapeAttribute(services)}" data-site-search-blog="${escapeAttribute(blog)}" data-site-search-blog-en="${escapeAttribute(blogEn)}" data-site-search-blog-he="${escapeAttribute(blogHe)}" aria-labelledby="site-search-title">
     <form method="dialog"><button type="submit" aria-label="${escapeAttribute(text.close)}">×</button></form>
     <h2 id="site-search-title">${escapeHtml(text.searchTitle)}</h2>
