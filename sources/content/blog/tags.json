@@ -1,5 +1,5 @@
 [
-  {"id":"demand-generation","status":"active","locales":{"en":{"name":"Demand generation","slug":"demand-generation"},"he":{"name":"יצירת ביקוש","slug":"יצirat-bikush"}}},
+  {"id":"demand-generation","status":"active","locales":{"en":{"name":"Demand generation","slug":"demand-generation"},"he":{"name":"יצירת ביקוש","slug":"yetzirat-bikush"}}},
   {"id":"positioning","status":"active","locales":{"en":{"name":"Positioning","slug":"positioning"},"he":{"name":"מיצוב","slug":"mitzuv"}}},
   {"id":"technical-seo","status":"active","locales":{"en":{"name":"Technical SEO","slug":"technical-seo"},"he":{"name":"SEO טכני","slug":"seo-techni"}}},
   {"id":"keyword-research","status":"active","locales":{"en":{"name":"Keyword research","slug":"keyword-research"},"he":{"name":"מחקר מילות מפתח","slug":"mechkar-milot-mafteach"}}},

@@ -34,7 +34,12 @@ test("repository fixtures cover the approved taxonomy and pagination boundary", 
 });
 
 const validRaw = {
-  settings: { id: "blog", locales: { en: { title: "Knowledge Hub" }, he: { title: "מרכז הידע" } } },
+  settings: {
+    id: "blog",
+    siteOrigin: "https://content.example",
+    basePath: "/",
+    locales: { en: { title: "Knowledge Hub" }, he: { title: "מרכז הידע" } }
+  },
   categories: [{ id: "seo", order: 2, locales: { en: { name: "SEO", slug: "seo" }, he: { name: "SEO", slug: "seo" } } }],
   tags: [{ id: "technical-seo", locales: { en: { name: "Technical SEO", slug: "technical-seo" }, he: { name: "SEO טכני", slug: "technical-seo" } } }],
   authors: [{ id: "maya-chen", portrait: "assets/images/team/team-1.webp", locales: { en: { name: "Maya Chen", slug: "maya-chen", bio: "Growth strategist." }, he: { name: "מאיה צ׳ן", slug: "maya-chen", bio: "אסטרטגית צמיחה." } } }],
@@ -92,6 +97,36 @@ test("rejects malformed blog settings IDs with contextual aggregate errors", () 
     () => createBlogModel(invalid),
     (error) => error instanceof AggregateError && error.errors.some((entry) => /BAD!.*settings\.id/.test(entry.message))
   );
+});
+
+test("rejects unsafe canonical settings origins and base paths with field context", () => {
+  const invalidSettings = [
+    { field: "siteOrigin", value: "http://content.example" },
+    { field: "siteOrigin", value: "https://editor@content.example" },
+    { field: "siteOrigin", value: "https://content.example/?preview=1" },
+    { field: "siteOrigin", value: "https://content.example/#preview" },
+    { field: "siteOrigin", value: "https://content.example/unrelated" },
+    { field: "basePath", value: "blog/" },
+    { field: "basePath", value: "/blog" },
+    { field: "basePath", value: "/blog/?preview=1" },
+    { field: "basePath", value: "/blog/#preview" },
+    { field: "basePath", value: "/blog\\path/" },
+    { field: "basePath", value: "/./blog/" },
+    { field: "basePath", value: "/%2e%2e/private/" },
+    { field: "basePath", value: "/blog/\nprivate/" }
+  ];
+
+  for (const { field, value } of invalidSettings) {
+    const invalid = structuredClone(validRaw);
+    invalid.settings[field] = value;
+
+    assert.throws(
+      () => createBlogModel(invalid),
+      (error) => error instanceof AggregateError && error.errors.some((entry) =>
+        new RegExp(`blog.*settings\\.${field}`).test(entry.message)
+      )
+    );
+  }
 });
 
 test("rejects percent-encoded traversal in hero, portrait, and nested block assets", () => {

@@ -167,6 +167,40 @@ function isInternalRoute(value) {
     !value.includes("\\") && !value.split("/").includes("..");
 }
 
+function isSafeSiteBasePath(value) {
+  return typeof value === "string" &&
+    /^\/(?:[A-Za-z0-9_-]+\/)*$/u.test(value) &&
+    !value.includes("%") &&
+    !/[\u0000-\u001F\u007F\\?#]/u.test(value);
+}
+
+function validateSettingsLocation(settings, id, collector) {
+  const basePath = settings.basePath;
+  const hasSafeBasePath = isSafeSiteBasePath(basePath);
+  if (!hasSafeBasePath) {
+    collector.add(id, "record", "settings.basePath", "must be a safe absolute base path ending in a slash");
+  }
+
+  if (typeof settings.siteOrigin !== "string") {
+    collector.add(id, "record", "settings.siteOrigin", "must be a canonical HTTPS site origin");
+    return;
+  }
+
+  let siteUrl;
+  try {
+    siteUrl = new URL(settings.siteOrigin);
+  } catch {
+    collector.add(id, "record", "settings.siteOrigin", "must be a canonical HTTPS site origin");
+    return;
+  }
+
+  if (siteUrl.protocol !== "https:" || siteUrl.username || siteUrl.password ||
+      siteUrl.search || siteUrl.hash || siteUrl.pathname.includes("%") ||
+      !hasSafeBasePath || siteUrl.pathname !== (basePath === "/" ? "/" : basePath.slice(0, -1))) {
+    collector.add(id, "record", "settings.siteOrigin", "must be a canonical HTTPS site origin matching basePath");
+  }
+}
+
 function validateArchivedResolution(article, collector) {
   const { id, redirect, withdrawal } = article;
   if (redirect !== undefined && withdrawal !== undefined) {
@@ -388,6 +422,7 @@ export function createBlogModel(raw, { now = new Date() } = {}) {
       collector.add(content.settings.id ?? "blog", "record", "settings.id", "must be a lowercase kebab-case identifier");
     }
     validateLocales(content.settings, content.settings.id ?? "blog", collector, ["title"]);
+    validateSettingsLocation(content.settings, content.settings.id ?? "blog", collector);
   }
 
   const indexes = {
