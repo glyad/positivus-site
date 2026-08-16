@@ -82,7 +82,7 @@ function renderHeader({ locale, outputPath, alternatePath }) {
   const blog = linkTo(outputPath, locale === "he" ? "he/blog/index.html" : "blog/index.html");
   const search = linkTo(outputPath, locale === "he" ? "he/search/index.html" : "search/index.html");
   const signIn = linkTo(outputPath, "sign-in.html");
-  const peer = linkTo(outputPath, `${safeCanonicalPath(alternatePath, "alternatePath")}index.html`);
+  const peer = alternatePath === null ? null : linkTo(outputPath, `${safeCanonicalPath(alternatePath, "alternatePath")}index.html`);
   const label = locale === "he" ? "English" : "עברית";
 
   return `<header class="site-header blog-site-header">
@@ -99,7 +99,7 @@ function renderHeader({ locale, outputPath, alternatePath }) {
       <a class="site-search-trigger" href="${escapeAttribute(search)}" data-site-search-open>${escapeHtml(text.search)}</a>
       <a class="button button--outline site-nav__cta" href="${escapeAttribute(`${home}#contact`)}">${escapeHtml(text.requestQuote)}</a>
       <a class="site-nav__login" href="${escapeAttribute(signIn)}">${escapeHtml(text.signIn)}</a>
-      <a class="language-toggle" href="${escapeAttribute(peer)}" lang="${locale === "he" ? "en" : "he"}">${escapeHtml(label)}</a>
+      ${peer ? `<a class="language-toggle" href="${escapeAttribute(peer)}" lang="${locale === "he" ? "en" : "he"}">${escapeHtml(label)}</a>` : ""}
     </nav>
   </div>
   <dialog data-site-search-dialog aria-labelledby="site-search-title">
@@ -152,7 +152,7 @@ export function renderDocument({
   if (!Array.isArray(structuredData) || !Array.isArray(scripts)) throw new TypeError("structuredData and scripts must be arrays");
 
   const canonicalUrl = siteUrl(siteOrigin, canonicalPath);
-  const alternateUrl = siteUrl(siteOrigin, alternatePath);
+  const alternateUrl = alternatePath === null ? null : siteUrl(siteOrigin, alternatePath);
   const asset = (path) => linkTo(outputPath, path);
   const text = copy[locale];
   const otherLocale = locale === "en" ? "he" : "en";
@@ -162,7 +162,7 @@ export function renderDocument({
 <title>${escapeHtml(title)} — Positivus</title>
 <link rel="icon" href="${escapeAttribute(asset("assets/icons/star.svg"))}" type="image/svg+xml" />
 <link rel="canonical" href="${escapeAttribute(canonicalUrl)}" />
-<link rel="alternate" hreflang="${otherLocale}" href="${escapeAttribute(alternateUrl)}" />
+${alternateUrl ? `<link rel="alternate" hreflang="${otherLocale}" href="${escapeAttribute(alternateUrl)}" />` : ""}
 <link rel="alternate" hreflang="${locale}" href="${escapeAttribute(canonicalUrl)}" />
 <link rel="stylesheet" href="${escapeAttribute(asset("css/main.css"))}" />
 <link rel="stylesheet" href="${escapeAttribute(asset("css/blog.css"))}" />

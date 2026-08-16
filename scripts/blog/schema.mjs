@@ -184,6 +184,10 @@ function validateLocales(record, id, collector, requiredFields) {
       const value = content[field];
       if (field === "blocks") {
         if (!Array.isArray(value) || value.length === 0) collector.add(id, locale, field, "must be a non-empty array");
+      } else if (field === "credentials") {
+        if (!Array.isArray(value) || value.length === 0 || value.some((credential) => typeof credential !== "string" || !credential.trim())) {
+          collector.add(id, locale, field, "must be a non-empty array of non-empty strings");
+        }
       } else if (typeof value !== "string" || !value.trim()) {
         collector.add(id, locale, field, "must be a non-empty string");
       }
@@ -377,7 +381,7 @@ function validateCollectionRecords(raw, indexes, collector) {
     }
   }
   for (const author of indexes.author.values()) {
-    author.availableLocales = validateLocales(author, author.id, collector, ["name", "slug", "bio"]);
+    author.availableLocales = validateLocales(author, author.id, collector, ["name", "slug", "bio", "credentials"]);
     if (!isSafeAssetPath(author.portrait)) collector.add(author.id, "record", "portrait", "must be a safe local asset path");
     validateProfessionalLinks(author, collector);
   }
@@ -390,6 +394,28 @@ function validateCollectionRecords(raw, indexes, collector) {
   validateLocalizedSlugs([...indexes.tag.values()], "tag", collector);
   validateLocalizedSlugs([...indexes.author.values()], "author", collector);
   validateLocalizedSlugs([...indexes.series.values()], "series", collector);
+}
+
+function validateArticleLocaleRelationships(article, locales, indexes, collector) {
+  const availableInLocale = (record, locale) => record?.availableLocales?.includes(locale);
+  const requireLocale = (locale, field, record, type) => {
+    if (record && !availableInLocale(record, locale)) {
+      collector.add(article.id, locale, field, `must reference a ${type} available in the article locale`);
+    }
+  };
+
+  for (const locale of locales) {
+    requireLocale(locale, "primaryCategory", indexes.category.get(article.primaryCategory), "category");
+    if (Array.isArray(article.tags)) {
+      article.tags.forEach((tagId, index) => requireLocale(locale, `tags[${index}]`, indexes.tag.get(tagId), "tag"));
+    }
+    requireLocale(locale, "primaryAuthor", indexes.author.get(article.primaryAuthor), "author");
+    if (Array.isArray(article.coAuthors)) {
+      article.coAuthors.forEach((authorId, index) => requireLocale(locale, `coAuthors[${index}]`, indexes.author.get(authorId), "author"));
+    }
+    if (typeof article.reviewer === "string") requireLocale(locale, "reviewer", indexes.author.get(article.reviewer), "author");
+    if (typeof article.series === "string") requireLocale(locale, "series", indexes.series.get(article.series), "series");
+  }
 }
 
 function validateArticle(article, indexes, collector) {
@@ -427,6 +453,8 @@ function validateArticle(article, indexes, collector) {
     }
   }
   if (article.relatedService && typeof article.relatedService !== "string") collector.add(id, "record", "relatedService", "must be a service ID string");
+
+  validateArticleLocaleRelationships(article, locales, indexes, collector);
 
   const publishedAt = parseDate(article.publishedAt, id, "publishedAt", collector);
   const editedAt = parseDate(article.editedAt, id, "editedAt", collector);

@@ -42,7 +42,7 @@ const validRaw = {
   },
   categories: [{ id: "seo", order: 2, locales: { en: { name: "SEO", slug: "seo" }, he: { name: "SEO", slug: "seo" } } }],
   tags: [{ id: "technical-seo", locales: { en: { name: "Technical SEO", slug: "technical-seo" }, he: { name: "SEO טכני", slug: "technical-seo" } } }],
-  authors: [{ id: "maya-chen", portrait: "assets/images/team/team-1.webp", locales: { en: { name: "Maya Chen", slug: "maya-chen", bio: "Growth strategist." }, he: { name: "מאיה צ׳ן", slug: "maya-chen", bio: "אסטרטגית צמיחה." } } }],
+  authors: [{ id: "maya-chen", portrait: "assets/images/team/team-1.webp", locales: { en: { name: "Maya Chen", slug: "maya-chen", bio: "Growth strategist.", credentials: ["Growth strategy"] }, he: { name: "מאיה צ׳ן", slug: "maya-chen", bio: "אסטרטגית צמיחה.", credentials: ["אסטרטגיית צמיחה"] } } }],
   series: [],
   articles: [{
     id: "seo-audit",
@@ -231,6 +231,44 @@ test("publishes only released records at the supplied build time", () => {
   raw.articles.push(scheduled);
   const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00.000Z") });
   assert.deepEqual(model.publicArticles.map((article) => article.id), ["seo-audit"]);
+});
+
+test("requires credentials localized for every available author locale", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.authors[0].locales.he.credentials = [];
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) => error instanceof AggregateError && error.errors.some((entry) => /maya-chen.*he.*credentials/.test(entry.message))
+  );
+});
+
+test("rejects article relationships unavailable in the article locale before rendering", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.articles[0].coAuthors = ["maya-chen"];
+  invalid.articles[0].reviewer = "maya-chen";
+  invalid.articles[0].series = "seo-series";
+  invalid.series = [{
+    id: "seo-series",
+    articleIds: ["seo-audit"],
+    audiences: ["practitioners"],
+    level: "intermediate",
+    locales: { en: { title: "SEO series", slug: "seo-series" } }
+  }];
+  delete invalid.categories[0].locales.he;
+  delete invalid.tags[0].locales.he;
+  delete invalid.authors[0].locales.he;
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) => error instanceof AggregateError &&
+      error.errors.some((entry) => /seo-audit.*he.*primaryCategory/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*he.*tags/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*he.*primaryAuthor/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*he.*coAuthors/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*he.*reviewer/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*he.*series/.test(entry.message))
+  );
 });
 
 test("accepts canonical professional links and aggregates unsafe author-link errors", () => {

@@ -51,11 +51,25 @@ function emitPages(model, template, version) {
   return pages;
 }
 
+function assertUniqueOutputPaths(pages) {
+  const byOutputPath = new Map();
+  for (const page of pages) {
+    const collisions = byOutputPath.get(page.outputPath) ?? [];
+    collisions.push(page);
+    byOutputPath.set(page.outputPath, collisions);
+  }
+  const duplicates = [...byOutputPath]
+    .filter(([, pagesForPath]) => pagesForPath.length > 1)
+    .map(([outputPath, pagesForPath]) => `${outputPath} (${pagesForPath.length} pages)`);
+  if (duplicates.length) throw new Error(`Duplicate blog output paths: ${duplicates.join(", ")}`);
+}
+
 /** Emit every deterministic, localized Blog entrypoint and return its manifest paths. */
 export async function renderBlogSite({ model, sourceDir, outputDir, version }) {
   if (!model?.settings?.locales) throw new TypeError("model must provide localized blog settings");
   const template = await readFile(resolve(sourceDir, "blog-template.html"), "utf8");
   const rendered = emitPages(model, template, version);
+  assertUniqueOutputPaths(rendered);
   const paths = [];
   for (const page of rendered) {
     await mkdir(dirname(resolve(outputDir, page.outputPath)), { recursive: true });

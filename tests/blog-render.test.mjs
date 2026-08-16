@@ -440,3 +440,53 @@ test("author profiles keep declared expertise and validated professional links w
   assert.match(html, /data-professional-links/);
   assert.match(html, /href="https:\/\/profiles\.example\/maya" target="_blank" rel="noreferrer noopener">Professional profile<\/a>/);
 });
+
+test("rejects duplicate emitted routes before any page can be overwritten", async () => {
+  const sourceDir = resolve(repositoryRoot, "sources");
+  const raw = await loadLocalBlogSource({ sourceDir });
+  const englishOnly = raw.articles.find((article) => article.id === "analytics-attribution-models");
+  raw.articles.find((article) => article.id === "marketing-dashboard").locales.he.slug = englishOnly.locales.en.slug;
+  const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00.000Z") });
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-route-collision-"));
+
+  await assert.rejects(
+    () => renderBlogSite({ model, sourceDir, outputDir, version: "1.2.0" }),
+    /duplicate blog output path.*he\/blog\/analytics-attribution-models\/index\.html/i
+  );
+  await assert.rejects(() => readFile(resolve(outputDir, "he/blog/analytics-attribution-models/index.html"), "utf8"), { code: "ENOENT" });
+});
+
+test("renders standalone localized category and author pages without an invented language peer", async () => {
+  const sourceDir = resolve(repositoryRoot, "sources");
+  const raw = await loadLocalBlogSource({ sourceDir });
+  raw.categories.push({ id: "solo-category", order: 8, locales: { en: { name: "Solo category", slug: "solo-category" } } });
+  raw.authors.push({
+    id: "solo-author",
+    portrait: "assets/images/team/team-1.webp",
+    expertise: ["strategy"],
+    locales: { en: { name: "Solo author", slug: "solo-author", role: "Advisor", bio: "Available in English.", credentials: ["Independent advisor"] } }
+  });
+  const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00.000Z") });
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-standalone-locale-"));
+  const pages = await renderBlogSite({ model, sourceDir, outputDir, version: "1.2.0" });
+
+  assert.ok(pages.includes("blog/category/solo-category/index.html"));
+  assert.ok(pages.includes("blog/authors/solo-author/index.html"));
+  assert.ok(!pages.includes("he/blog/category/solo-category/index.html"));
+  assert.ok(!pages.includes("he/blog/authors/solo-author/index.html"));
+  for (const outputPath of ["blog/category/solo-category/index.html", "blog/authors/solo-author/index.html"]) {
+    const html = await readFile(resolve(outputDir, outputPath), "utf8");
+    assert.doesNotMatch(html, /hreflang="he"/);
+    assert.doesNotMatch(html, /class="language-toggle"/);
+  }
+});
+
+test("renders Hebrew author credentials without English leakage", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-hebrew-credentials-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const html = await readFile(resolve(outputDir, "he/blog/authors/maya-chen/index.html"), "utf8");
+  assert.match(html, /MBA באסטרטגיית צמיחה/);
+  assert.doesNotMatch(html, /MBA, growth strategy/);
+});

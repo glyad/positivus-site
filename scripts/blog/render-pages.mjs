@@ -76,11 +76,14 @@ function time(date, locale) {
 
 function documentPage({ model, template, locale, outputPath, alternateOutputPath, title, description, mainHtml, bodyClass = "blog-page", structuredData = [] }) {
   const canonicalPath = outputPath.replace(/index\.html$/u, "");
+  const alternatePath = alternateOutputPath === undefined
+    ? peerPath({ locale: otherLocale(locale), outputPath })
+    : alternateOutputPath === null ? null : alternateOutputPath.replace(/index\.html$/u, "");
   return {
     outputPath,
     html: renderDocument({
       template, locale, outputPath, title, description, canonicalPath,
-      alternatePath: (alternateOutputPath ?? peerPath({ locale: otherLocale(locale), outputPath })).replace(/index\.html$/u, ""),
+      alternatePath,
       bodyClass, mainHtml, structuredData, siteOrigin: model.settings.siteOrigin
     })
   };
@@ -290,7 +293,8 @@ export function renderCategoryPage({ model, template, locale, category, outputPa
   const levels = [...new Set(articles.map((article) => article.level))];
   const filterLink = (name, value) => `${href(outputPath, blogRoute({ locale, kind: "browse" }))}?${name}=${encodeURIComponent(value)}`;
   const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: content.name }] })}<section class="shell" data-category-page><p>${text(ui.category)}</p><h1 id="page-title">${text(content.name)}</h1><p>${text(content.description)}</p><nav data-category-facets aria-label="${text(content.name)}"><section><h2>${text(ui.formats)}</h2><ul>${formats.map((value) => `<li><a href="${escapeAttribute(filterLink("format", value))}">${text(dimension(value, locale))}</a></li>`).join("")}</ul></section><section><h2>${text(ui.levels)}</h2><ul>${levels.map((value) => `<li><a href="${escapeAttribute(filterLink("level", value))}">${text(dimension(value, locale))}</a></li>`).join("")}</ul></section></nav>${featured ? `<section data-category-featured><h2>${text(ui.featuredInCategory)}</h2>${renderArticleCard({ model, locale, outputPath, article: featured })}</section>` : ""}<section data-category-remaining><h2>${text(ui.remainingInCategory)}</h2>${cards({ model, locale, outputPath, articles: articles.slice(1) })}</section></section>`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "category", slug: localized(category, otherLocale(locale)).slug }), title: content.name, description: content.description, mainHtml });
+  const peer = localized(category, otherLocale(locale));
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: peer ? blogRoute({ locale: otherLocale(locale), kind: "category", slug: peer.slug }) : null, title: content.name, description: content.description, mainHtml });
 }
 
 export function renderTagPage({ model, template, locale, tag, outputPath = blogRoute({ locale, kind: "tag", slug: localized(tag, locale).slug }) }) {
@@ -298,7 +302,8 @@ export function renderTagPage({ model, template, locale, tag, outputPath = blogR
   const articles = articlesFor(model, locale).filter((article) => article.tags.includes(tag.id));
   const categories = [...new Set(articles.map((article) => article.primaryCategory))].map((id) => model.byId.category.get(id)).sort((left, right) => left.order - right.order);
   const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: content.name }] })}<section class="shell" data-tag-page><p><a data-tag-index-link href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "tags" })))}">${text(ui.backToTagIndex)}</a></p><p>${text(ui.tag)}</p><h1 id="page-title">${text(content.name)}</h1>${content.description ? `<p>${text(content.description)}</p>` : ""}<nav data-tag-categories aria-label="${text(ui.relatedCategories)}"><h2>${text(ui.relatedCategories)}</h2><ul>${categories.map((category) => { const item = localized(category, locale); return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "category", slug: item.slug })))}">${text(item.name)}</a></li>`; }).join("")}</ul></nav>${cards({ model, locale, outputPath, articles })}</section>`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "tag", slug: localized(tag, otherLocale(locale)).slug }), title: content.name, description: content.description ?? content.name, mainHtml });
+  const peer = localized(tag, otherLocale(locale));
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: peer ? blogRoute({ locale: otherLocale(locale), kind: "tag", slug: peer.slug }) : null, title: content.name, description: content.description ?? content.name, mainHtml });
 }
 
 function seriesEntries(model, series, locale) {
@@ -310,7 +315,8 @@ export function renderSeriesPage({ model, template, locale, series, outputPath =
   const ui = copy[locale]; const content = localized(series, locale); const entries = seriesEntries(model, series, locale);
   const total = entries.reduce((sum, article) => sum + article.readingMinutes[locale], 0);
   const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: content.title }] })}<section class="shell" data-series-page><h1 id="page-title">${text(content.title)}</h1><p>${text(content.description)}</p><dl><dt>${text(ui.audience)}</dt><dd>${series.audiences.map((value) => text(dimension(value, locale))).join(", ")}</dd><dt>${text(ui.level)}</dt><dd>${text(dimension(series.level, locale))}</dd><dt>${text(ui.totalReading)}</dt><dd>${total} ${text(ui.read)}</dd></dl><ol data-series-entries>${entries.map((article) => `<li>${renderArticleCard({ model, locale, outputPath, article })}</li>`).join("")}</ol></section>`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "series", slug: localized(series, otherLocale(locale)).slug }), title: content.title, description: content.description, mainHtml });
+  const peer = localized(series, otherLocale(locale));
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: peer ? blogRoute({ locale: otherLocale(locale), kind: "series", slug: peer.slug }) : null, title: content.title, description: content.description, mainHtml });
 }
 
 export function renderAuthorsPage({ model, template, locale, outputPath = blogRoute({ locale, kind: "authors" }) }) {
@@ -327,8 +333,9 @@ export function renderAuthorPage({ model, template, locale, author, outputPath =
   const expertise = author.expertise.map((value) => expertiseLabel(model, value, locale));
   const guideCount = authored.filter((article) => article.format === "guide").length;
   const seriesCount = new Set(authored.map((article) => article.series).filter(Boolean)).size;
-  const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.authors, outputPath: blogRoute({ locale, kind: "authors" }) }, { label: content.name }] })}<section class="shell" data-author-page><img src="${escapeAttribute(asset(outputPath, author.portrait))}" alt="${escapeAttribute(content.name)}" /><h1 id="page-title">${text(content.name)}</h1><p>${text(content.role)}</p><p>${text(content.bio)}</p><h2>${text(ui.credentials)}</h2><ul>${author.credentials.map((credential) => `<li>${text(credential)}</li>`).join("")}</ul><section data-author-profile-expertise><h2>${text(ui.topics)}</h2><p>${expertise.map(text).join(", ")}</p></section>${renderProfessionalLinks({ author, locale })}<dl data-author-counts><dt>${text(ui.articles)}</dt><dd>${authored.length}</dd><dt>${text(ui.guides)}</dt><dd>${guideCount}</dd><dt>${text(ui.seriesCount)}</dt><dd>${seriesCount}</dd></dl><h2>${text(ui.featuredWork)}</h2>${cards({ model, locale, outputPath, articles: authored.slice(0, 1) })}<h2>${text(ui.latestWork)}</h2>${cards({ model, locale, outputPath, articles: authored })}<h2>${text(ui.topics)}</h2><p>${topics.map(text).join(", ")}</p>${reviewed.length ? `<section data-reviewed-content><h2>${text(ui.reviewedWork)}</h2>${cards({ model, locale, outputPath, articles: reviewed })}</section>` : ""}</section>${renderNewsletterPanel({ locale })}`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "author", slug: localized(author, otherLocale(locale)).slug }), title: content.name, description: content.bio, mainHtml });
+  const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.authors, outputPath: blogRoute({ locale, kind: "authors" }) }, { label: content.name }] })}<section class="shell" data-author-page><img src="${escapeAttribute(asset(outputPath, author.portrait))}" alt="${escapeAttribute(content.name)}" /><h1 id="page-title">${text(content.name)}</h1><p>${text(content.role)}</p><p>${text(content.bio)}</p><h2>${text(ui.credentials)}</h2><ul>${content.credentials.map((credential) => `<li>${text(credential)}</li>`).join("")}</ul><section data-author-profile-expertise><h2>${text(ui.topics)}</h2><p>${expertise.map(text).join(", ")}</p></section>${renderProfessionalLinks({ author, locale })}<dl data-author-counts><dt>${text(ui.articles)}</dt><dd>${authored.length}</dd><dt>${text(ui.guides)}</dt><dd>${guideCount}</dd><dt>${text(ui.seriesCount)}</dt><dd>${seriesCount}</dd></dl><h2>${text(ui.featuredWork)}</h2>${cards({ model, locale, outputPath, articles: authored.slice(0, 1) })}<h2>${text(ui.latestWork)}</h2>${cards({ model, locale, outputPath, articles: authored })}<h2>${text(ui.topics)}</h2><p>${topics.map(text).join(", ")}</p>${reviewed.length ? `<section data-reviewed-content><h2>${text(ui.reviewedWork)}</h2>${cards({ model, locale, outputPath, articles: reviewed })}</section>` : ""}</section>${renderNewsletterPanel({ locale })}`;
+  const peer = localized(author, otherLocale(locale));
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: peer ? blogRoute({ locale: otherLocale(locale), kind: "author", slug: peer.slug }) : null, title: content.name, description: content.bio, mainHtml });
 }
 
 function relatedArticles(model, article, locale) {
@@ -368,7 +375,8 @@ export function renderArticlePage({ model, template, locale, article, outputPath
   const body = renderBlocks(content.blocks, { locale, resolveAsset: (source) => asset(outputPath, source), consultation: article.relatedService ? { serviceId: article.relatedService } : null });
   const anchored = anchorRenderedHeadings(body);
   const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: category.name, outputPath: blogRoute({ locale, kind: "category", slug: category.slug }) }, { label: content.title }] })}<article class="shell article-page" data-article-page itemscope itemtype="https://schema.org/Article"><header><p>${text(category.name)} · ${text(dimension(article.level, locale))}</p><h1 id="page-title" itemprop="headline">${text(content.title)}</h1><p itemprop="description">${text(content.summary)}</p>${metadata}${hero}<div class="article-tools"><button type="button" data-copy-link>${text(ui.copyLink)}</button><button type="button" data-print-article>${text(ui.print)}</button></div></header><aside data-article-toc><h2>${text(ui.tableOfContents)}</h2><ol>${anchored.headings.map((heading) => `<li><a href="#${heading.id}">${heading.label}</a></li>`).join("")}</ol></aside><div class="article-body" itemprop="articleBody">${anchored.html}</div><section data-article-tags><h2>${text(ui.tags)}</h2><ul>${tags}</ul></section>${article.correctionNote?.[locale] ? `<p data-correction-note>${text(article.correctionNote[locale])}</p>` : ""}${renderSeriesNavigation({ model, article, locale, outputPath })}<section data-related-content><h2>${text(ui.related)}</h2>${cards({ model, locale, outputPath, articles: relatedArticles(model, article, locale) })}</section>${renderNewsletterPanel({ locale })}<section data-demo-comments data-prototype="true"><h2>${text(ui.comments)}</h2><p>${text(ui.commentsBody)}</p><form><label for="demo-comment">${text(ui.addComment)}</label><textarea id="demo-comment" name="comment"></textarea><button type="button" disabled>${text(ui.addComment)}</button></form></section></article>`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: articleRoute(article, otherLocale(locale)), title: content.title, description: content.summary, mainHtml, structuredData: [{ "@context": "https://schema.org", "@type": "Article", headline: content.title, datePublished: article.publishedAt.toISOString(), dateModified: article.editedAt.toISOString() }] });
+  const peer = articleRoute(article, otherLocale(locale)) ?? (locale === "en" ? blogRoute({ locale: "he", kind: "article", slug: content.slug }) : null);
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: peer, title: content.title, description: content.summary, mainHtml, structuredData: [{ "@context": "https://schema.org", "@type": "Article", headline: content.title, datePublished: article.publishedAt.toISOString(), dateModified: article.editedAt.toISOString() }] });
 }
 
 export function renderSearchFallbackPage({ model, template, locale, outputPath = blogRoute({ locale, kind: "browse" }) }) {

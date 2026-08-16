@@ -77,6 +77,24 @@ test("uses a canonical root origin without adding an extra slash", () => {
   assert.match(html, /<link rel="alternate" hreflang="he" href="https:\/\/content\.example\/he\/blog\/"/);
 });
 
+test("omits language navigation and reciprocal alternate metadata when no peer is emitted", () => {
+  const html = renderDocument({
+    template,
+    locale: "en",
+    outputPath: "blog/authors/solo-author/index.html",
+    title: "Solo author",
+    description: "English-only author profile.",
+    canonicalPath: "blog/authors/solo-author/",
+    alternatePath: null,
+    bodyClass: "blog-page",
+    mainHtml: "<h1>Solo author</h1>"
+  });
+
+  assert.match(html, /<link rel="alternate" hreflang="en"/);
+  assert.doesNotMatch(html, /hreflang="he"/);
+  assert.doesNotMatch(html, /class="language-toggle"/);
+});
+
 test("emits injected bilingual settings into temporary localized Blog Home files", async () => {
   const model = await loadRepositoryBlogModel();
   const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-shell-"));
