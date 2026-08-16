@@ -20,7 +20,7 @@ const copy = {
     unavailable: "This article is not yet available in Hebrew.", availableEnglish: "Read the English article", backToBlog: "Back to the blog",
     noResults: "Search the blog", noResultsBody: "Use the search and filters to find practical marketing guidance.",
     home: "Knowledge Hub", category: "Category", tag: "Topic", author: "Author", searchPlaceholder: "Search titles, topics, and authors",
-    tagIndex: "All topics", backToTagIndex: "Browse all topics", relatedCategories: "Related categories", formats: "Formats", levels: "Levels",
+    tagIndex: "All topics", backToTagIndex: "Browse all topics", relatedCategories: "Related categories", formats: "Formats", levels: "Levels", apply: "Apply",
     featuredInCategory: "Featured in this category", remainingInCategory: "More in this category", articles: "Articles", guides: "Guides", seriesCount: "Series"
   },
   he: {
@@ -40,7 +40,7 @@ const copy = {
     unavailable: "המאמר הזה עדיין אינו זמין בעברית.", availableEnglish: "לקריאת המאמר באנגלית", backToBlog: "חזרה לבלוג",
     noResults: "חיפוש בבלוג", noResultsBody: "השתמשו בחיפוש ובמסננים כדי למצוא הנחיות שיווק מעשיות.",
     home: "מרכז הידע", category: "קטגוריה", tag: "נושא", author: "כותב", searchPlaceholder: "חיפוש בכותרות, נושאים וכותבים",
-    tagIndex: "כל הנושאים", backToTagIndex: "לכל הנושאים", relatedCategories: "קטגוריות קשורות", formats: "פורמטים", levels: "רמות",
+    tagIndex: "כל הנושאים", backToTagIndex: "לכל הנושאים", relatedCategories: "קטגוריות קשורות", formats: "פורמטים", levels: "רמות", apply: "החלה",
     featuredInCategory: "נבחר בקטגוריה", remainingInCategory: "עוד בקטגוריה", articles: "מאמרים", guides: "מדריכים", seriesCount: "סדרות"
   }
 };
@@ -120,13 +120,15 @@ function labelsFor(article, locale) {
   return `${text(ui.level)}: ${text(dimension(article.level, locale))} · ${text(ui.format)}: ${text(dimension(article.format, locale))} · ${article.readingMinutes[locale]} ${text(ui.read)}`;
 }
 
-export function renderArticleCard({ model, locale, outputPath, article }) {
+export function renderArticleCard({ model, locale, outputPath, article, featured = false }) {
   const content = localized(article, locale);
   const category = localized(categoryFor(model, article), locale);
   const author = localized(authorFor(model, article.primaryAuthor), locale);
   const target = articleRoute(article, locale);
   const ui = copy[locale];
-  return `<article class="blog-card" data-article-card>
+  const artwork = featured ? `<figure class="blog-card__artwork"><img src="${escapeAttribute(asset(outputPath, article.hero.src))}" alt="${escapeAttribute(article.hero.decorative ? "" : article.hero.alt[locale])}" /></figure>` : "";
+  return `<article class="blog-card" data-article-card${featured ? " data-featured-card" : ""}>
+  ${artwork}
   <p class="blog-card__category">${text(category.name)}</p>
   <h3><a href="${escapeAttribute(href(outputPath, target))}">${text(content.title)}</a></h3>
   <p>${text(content.summary)}</p>
@@ -218,7 +220,7 @@ export function renderBlogHome({ model, template, locale, version = "", outputPa
   <p>${text(ui.home)}</p><h1 id="page-title">${text(settings.title)}</h1><p>${text(settings.summary)}</p>${renderSearch({ locale, outputPath })}
   <nav aria-label="${text(ui.categories)}"><ul>${categories.map((category) => { const entry = localized(category, locale); return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "category", slug: entry.slug })))}">${text(entry.name)}</a></li>`; }).join("")}</ul></nav>
 </section>
-<section class="shell" aria-labelledby="featured-title"><h2 id="featured-title">${text(ui.featured)}</h2>${renderArticleCard({ model, locale, outputPath, article: featured })}</section>
+<section class="shell" aria-labelledby="featured-title"><h2 id="featured-title">${text(ui.featured)}</h2>${renderArticleCard({ model, locale, outputPath, article: featured, featured: true })}</section>
 <section class="shell" aria-labelledby="latest-title"><h2 id="latest-title">${text(ui.latest)}</h2>${cards({ model, locale, outputPath, articles: articles.filter((article) => article.id !== featured.id).slice(0, 6) })}<p><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "browse" })))}">${text(ui.browse)}</a></p></section>
 <section class="shell" aria-labelledby="evergreen-title"><h2 id="evergreen-title">${text(ui.evergreen)}</h2>${cards({ model, locale, outputPath, articles: articles.slice(-3).reverse() })}</section>
 <section class="shell" aria-labelledby="authors-title"><h2 id="authors-title">${text(ui.authors)}</h2><div class="author-grid">${model.authors.filter((author) => localized(author, locale)).sort((a, b) => localized(a, locale).name.localeCompare(localized(b, locale).name, locale)).map((author) => renderAuthorCard({ model, locale, outputPath, author })).join("")}</div></section>
@@ -232,11 +234,28 @@ function renderPagination({ locale, articleCount }) {
   return `<nav aria-label="${text(ui.page)}" data-pagination><ol>${Array.from({ length: pages }, (_, index) => `<li><a href="?page=${index + 1}"${index === 0 ? " aria-current=\"page\"" : ""}>${index + 1}</a></li>`).join("")}</ol></nav>`;
 }
 
+function renderFilterOptions(records, locale, valueOf, labelOf) {
+  return records.map((record) => `<option value="${escapeAttribute(valueOf(record))}">${text(labelOf(record))}</option>`).join("");
+}
+
+function renderBrowseFilters({ model, locale, articles }) {
+  const ui = copy[locale];
+  const formats = [...new Set(articles.map((article) => article.format))].sort();
+  const audiences = [...new Set(articles.flatMap((article) => article.audiences))].sort();
+  const levels = [...new Set(articles.map((article) => article.level))].sort();
+  const authors = model.authors.filter((author) => localized(author, locale)).sort((left, right) => localized(left, locale).name.localeCompare(localized(right, locale).name, locale));
+  const controls = (prefix) => {
+    const select = (id, label, options) => `<label for="${prefix}-filter-${id}">${text(label)}<select id="${prefix}-filter-${id}" data-filter-${id}><option value="">${text(label)}</option>${options}</select></label>`;
+    return `${select("category", ui.category, renderFilterOptions(model.categories.filter((category) => localized(category, locale)), locale, (category) => category.id, (category) => localized(category, locale).name))}${select("format", ui.format, formats.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("audience", ui.audience, audiences.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("level", ui.level, levels.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("author", ui.author, renderFilterOptions(authors, locale, (author) => author.id, (author) => localized(author, locale).name))}${select("reading-duration", ui.read, `<option value="under-5">${text(locale === "he" ? "עד 5 דקות" : "Under 5 minutes")}</option><option value="5-10">${text(locale === "he" ? "5–10 דקות" : "5–10 minutes")}</option><option value="10-plus">${text(locale === "he" ? "10 דקות ומעלה" : "10+ minutes")}</option>`)}${select("publication-date", ui.published, `<option value="30-days">${text(locale === "he" ? "30 הימים האחרונים" : "Last 30 days")}</option><option value="90-days">${text(locale === "he" ? "90 הימים האחרונים" : "Last 90 days")}</option><option value="year">${text(locale === "he" ? "השנה האחרונה" : "Last year")}</option>`)}`;
+  };
+  return `<aside aria-label="${text(ui.filters)}" data-filter-panel><h2>${text(ui.filters)}</h2><button type="button" data-filter-toggle aria-expanded="false">${text(ui.filters)}</button><div data-active-filters aria-live="polite">${text(ui.activeFilters)}: 0</div><div data-filter-controls>${controls("desktop")}</div></aside><div data-filter-drawer role="dialog" aria-label="${text(ui.filters)}" hidden><div data-filter-controls>${controls("drawer")}</div><button type="button" data-filter-apply>${text(ui.apply)}</button><button type="button" data-filter-clear>${text(ui.clear)}</button></div>`;
+}
+
 export function renderBrowsePage({ model, template, locale, outputPath = blogRoute({ locale, kind: "browse" }) }) {
   const ui = copy[locale];
   const articles = articlesFor(model, locale);
   const mainHtml = `<section class="shell" data-blog-browse><h1 id="page-title">${text(ui.allInsights)}</h1>${renderSearch({ locale, outputPath })}
-  <aside aria-label="${text(ui.filters)}" data-filter-panel><h2>${text(ui.filters)}</h2><button type="button" data-filter-toggle>${text(ui.filters)}</button><div data-active-filters aria-live="polite">${text(ui.activeFilters)}: 0</div><button type="button" data-clear-filters>${text(ui.clear)}</button></aside>
+  ${renderBrowseFilters({ model, locale, articles })}
   <label>${text(ui.sort)} <select data-blog-sort><option value="newest">${text(ui.newest)}</option><option value="relevance">${text(ui.relevance)}</option></select></label><p data-result-count>${articles.length} ${text(ui.results)}</p>
   ${cards({ model, locale, outputPath, articles: articles.slice(0, 12) })}${renderPagination({ locale, articleCount: articles.length })}${renderTagCloud({ model, locale, outputPath })}</section>`;
   return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "browse" }), title: ui.allInsights, description: ui.noResultsBody, mainHtml });
@@ -291,7 +310,7 @@ export function renderAuthorPage({ model, template, locale, author, outputPath =
 
 function relatedArticles(model, article, locale) {
   const available = articlesFor(model, locale).filter((candidate) => candidate.id !== article.id);
-  const related = []; const add = (candidate) => { if (candidate && !related.some((item) => item.id === candidate.id)) related.push(candidate); };
+  const related = []; const add = (candidate) => { if (candidate && candidate.id !== article.id && !related.some((item) => item.id === candidate.id)) related.push(candidate); };
   for (const id of article.relatedArticles ?? []) add(available.find((candidate) => candidate.id === id));
   if (article.series) for (const candidate of seriesEntries(model, model.byId.series.get(article.series), locale)) add(candidate);
   for (const candidate of available.filter((candidate) => candidate.primaryCategory === article.primaryCategory && candidate.tags.some((tag) => article.tags.includes(tag)))) add(candidate);

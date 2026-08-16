@@ -339,3 +339,48 @@ test("renders localized names and hero alternatives with one layer of attribute 
   assert.doesNotMatch(author, /A &amp;amp; B/);
   assert.doesNotMatch(article, /A &amp;amp; B/);
 });
+
+test("related reading excludes the current article while retaining explicit priority", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-related-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const html = await readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8");
+  const related = html.match(/<section data-related-content>[\s\S]*?<\/section><section class="blog-newsletter"/u)?.[0] ?? "";
+  assert.match(related, /href="\.\.\/paid-media-budget\/index\.html"/);
+  assert.doesNotMatch(related, /href="index\.html"/);
+});
+
+test("browse exposes localized controls for every approved filter and its mobile actions", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-filters-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const [english, hebrew] = await Promise.all([
+    readFile(resolve(outputDir, "blog/search/index.html"), "utf8"),
+    readFile(resolve(outputDir, "he/blog/search/index.html"), "utf8")
+  ]);
+  for (const name of ["category", "format", "audience", "level", "author", "reading-duration", "publication-date"]) {
+    assert.match(english, new RegExp(`data-filter-${name}`));
+  }
+  assert.match(english, /data-filter-drawer/);
+  assert.match(english, /data-filter-apply/);
+  assert.match(english, /data-filter-clear/);
+  assert.match(english, /data-active-filters[^>]*aria-live="polite"/);
+  assert.match(english, /<option value="seo">SEO<\/option>/);
+  assert.match(english, /<option value="maya-chen">Maya Chen<\/option>/);
+  assert.match(hebrew, /<option value="paid-media">מדיה ממומנת<\/option>/);
+});
+
+test("Blog Home gives only its featured guide escaped, depth-safe hero artwork", async () => {
+  const model = await loadRepositoryBlogModel();
+  const modified = structuredClone(model);
+  modified.byId.article.get("sustainable-demand-system").hero.alt.en = "A & B";
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-featured-artwork-"));
+  await renderBlogSite({ model: modified, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const html = await readFile(resolve(outputDir, "blog/index.html"), "utf8");
+  assert.match(html, /data-featured-card/);
+  assert.match(html, /src="\.\.\/assets\/images\/decor\/hero-illustration\.svg" alt="A &amp; B"/);
+  assert.equal((html.match(/data-featured-card/g) ?? []).length, 1);
+});
