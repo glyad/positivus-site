@@ -2,6 +2,13 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import { escapeAttribute, escapeHtml, renderBlocks } from "../scripts/blog/render-blocks.mjs";
+import { mkdtemp, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { resolve } from "node:path";
+
+import { repositoryRoot } from "../scripts/build.mjs";
+import { renderBlogSite } from "../scripts/blog/render-site.mjs";
+import { loadRepositoryBlogModel } from "./helpers/blog-fixture.mjs";
 
 const resolveAsset = (path) => `../../${path}`;
 
@@ -165,4 +172,87 @@ test("keeps structured semantics neutral for Hebrew RTL content", () => {
   assert.match(html, /למה\?/);
   assert.match(html, /אזהרה/);
   assert.doesNotMatch(html, /dir="ltr"/);
+});
+
+test("renders every approved page family, localized article peers, and the missing Hebrew peer", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-render-"));
+  const pages = await renderBlogSite({
+    model,
+    sourceDir: resolve(repositoryRoot, "sources"),
+    outputDir,
+    version: "1.2.0"
+  });
+
+  for (const outputPath of [
+    "blog/search/index.html",
+    "blog/category/seo/index.html",
+    "blog/tag/technical-seo/index.html",
+    "blog/series/growth-foundations/index.html",
+    "blog/authors/index.html",
+    "blog/authors/maya-chen/index.html",
+    "blog/seo-audit-90-minutes/index.html",
+    "he/blog/search/index.html",
+    "he/blog/category/seo/index.html",
+    "he/blog/tag/seo-techni/index.html",
+    "he/blog/series/yesodot-hatzmicha/index.html",
+    "he/blog/authors/index.html",
+    "he/blog/authors/maya-chen/index.html",
+    "he/blog/audit-seo-be-90-dakot/index.html",
+    "he/blog/analytics-attribution-models/index.html"
+  ]) assert.ok(pages.includes(outputPath), `missing ${outputPath}`);
+
+  const missingTranslation = await readFile(resolve(outputDir, "he/blog/analytics-attribution-models/index.html"), "utf8");
+  assert.match(missingTranslation, /data-missing-translation/);
+  assert.match(missingTranslation, /analytics-attribution-models/);
+  assert.doesNotMatch(missingTranslation, /Credit is not causation/);
+});
+
+test("article pages expose the approved editorial hierarchy and prototype-only conversion landmarks", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-article-"));
+  await renderBlogSite({
+    model,
+    sourceDir: resolve(repositoryRoot, "sources"),
+    outputDir,
+    version: "1.2.0"
+  });
+
+  const html = await readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8");
+  for (const fragment of [
+    "data-breadcrumbs",
+    "data-article-author",
+    "datePublished",
+    "dateModified",
+    "data-copy-link",
+    "data-print-article",
+    "data-article-toc",
+    "data-article-tags",
+    "data-related-content",
+    "data-series-navigation",
+    "data-newsletter-form",
+    "data-demo-comments"
+  ]) assert.match(html, new RegExp(fragment));
+  assert.match(html, /Corrected on June 12, 2026/);
+  assert.match(html, /Daniel Levi/);
+  assert.match(html, /data-demo-comments[^>]*data-prototype="true"/);
+});
+
+test("browse starts with twelve stable cards and accessible numbered pagination", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-browse-"));
+  await renderBlogSite({
+    model,
+    sourceDir: resolve(repositoryRoot, "sources"),
+    outputDir,
+    version: "1.2.0"
+  });
+
+  const html = await readFile(resolve(outputDir, "blog/search/index.html"), "utf8");
+  assert.equal((html.match(/data-article-card/g) ?? []).length, 12);
+  assert.match(html, /data-active-filters/);
+  assert.match(html, /data-blog-sort/);
+  assert.match(html, /data-result-count/);
+  assert.match(html, /data-pagination/);
+  assert.match(html, /aria-current="page"/);
 });

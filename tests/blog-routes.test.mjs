@@ -87,7 +87,10 @@ test("emits injected bilingual settings into temporary localized Blog Home files
     version: "test-shell-1"
   });
 
-  assert.deepEqual(pages, ["blog/index.html", "he/blog/index.html"]);
+  assert.ok(pages.includes("blog/index.html"));
+  assert.ok(pages.includes("he/blog/index.html"));
+  assert.ok(pages.includes("blog/search/index.html"));
+  assert.ok(pages.includes("he/blog/analytics-attribution-models/index.html"));
   const [english, hebrew] = await Promise.all([
     readFile(resolve(outputDir, "blog/index.html"), "utf8"),
     readFile(resolve(outputDir, "he/blog/index.html"), "utf8")

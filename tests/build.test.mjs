@@ -60,3 +60,24 @@ test("build manifest tracks the package version", async () => {
   assert.ok(manifest.entrypoints.includes("blog/index.html"));
   assert.ok(manifest.entrypoints.includes("he/blog/index.html"));
 });
+
+test("build manifest lists emitted editorial routes, including the explicit missing translation page", async () => {
+  const outputDir = await buildSite();
+  const manifest = JSON.parse(await readFile(resolve(outputDir, "manifest.json"), "utf8"));
+  const required = [
+    "blog/search/index.html",
+    "blog/category/seo/index.html",
+    "blog/tag/technical-seo/index.html",
+    "blog/series/growth-foundations/index.html",
+    "blog/authors/maya-chen/index.html",
+    "blog/marketing-dashboard/index.html",
+    "he/blog/audit-seo-be-90-dakot/index.html",
+    "he/blog/analytics-attribution-models/index.html"
+  ];
+
+  assert.equal(new Set(manifest.entrypoints).size, manifest.entrypoints.length);
+  for (const outputPath of required) {
+    assert.ok(manifest.entrypoints.includes(outputPath), `manifest omits ${outputPath}`);
+    assert.equal((await stat(resolve(outputDir, outputPath))).isFile(), true);
+  }
+});

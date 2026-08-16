@@ -1,56 +1,64 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import { blogRoute, relativeSitePath } from "./routes.mjs";
-import { escapeHtml, renderDocument } from "./render-shell.mjs";
+import { blogRoute } from "./routes.mjs";
+import {
+  renderArticlePage,
+  renderAuthorPage,
+  renderAuthorsPage,
+  renderBlogHome,
+  renderBrowsePage,
+  renderCategoryPage,
+  renderMissingTranslationPage,
+  renderSeriesPage,
+  renderTagPage
+} from "./render-pages.mjs";
 
 const LOCALES = ["en", "he"];
+const localized = (record, locale) => record?.locales?.[locale] ?? null;
 
-function renderHomeMain({ locale, settings, outputPath, version }) {
-  const content = settings.locales[locale];
-  const browsePath = blogRoute({ locale, kind: "browse" });
-  const relativeBrowsePath = relativeSitePath(outputPath, browsePath);
-  const label = locale === "he" ? "תובנות שיווק מעשיות" : "Practical marketing insight";
-  const search = locale === "he" ? "חיפוש בבלוג" : "Search the blog";
-  return `<section class="blog-home shell" data-blog-home data-build-version="${escapeHtml(version)}">
-  <p class="blog-home__eyebrow">${escapeHtml(label)}</p>
-  <h1 id="page-title">${escapeHtml(content.title)}</h1>
-  <p>${escapeHtml(content.summary ?? "")}</p>
-  <form action="${relativeBrowsePath}" method="get" role="search" data-blog-search-form>
-    <label for="blog-search-input">${escapeHtml(search)}</label>
-    <input id="blog-search-input" name="q" type="search" />
-    <button type="submit">${escapeHtml(search)}</button>
-  </form>
-</section>`;
+function byLocalizedName(locale) {
+  return (left, right) => localized(left, locale).name.localeCompare(localized(right, locale).name, locale) || left.id.localeCompare(right.id);
 }
 
-/** Emit the minimal localized Blog Home shell for each configured locale. */
+function emitPages(model, template, version) {
+  const pages = [];
+  for (const locale of LOCALES) {
+    pages.push(renderBlogHome({ model, template, locale, version }));
+    pages.push(renderBrowsePage({ model, template, locale }));
+    for (const category of model.categories.filter((record) => localized(record, locale))) pages.push(renderCategoryPage({ model, template, locale, category }));
+    for (const tag of model.tags.filter((record) => localized(record, locale)).sort(byLocalizedName(locale))) pages.push(renderTagPage({ model, template, locale, tag }));
+    for (const series of model.series.filter((record) => localized(record, locale)).sort((left, right) => left.id.localeCompare(right.id))) pages.push(renderSeriesPage({ model, template, locale, series }));
+    pages.push(renderAuthorsPage({ model, template, locale }));
+    for (const author of model.authors.filter((record) => localized(record, locale)).sort(byLocalizedName(locale))) pages.push(renderAuthorPage({ model, template, locale, author }));
+    for (const article of model.publicArticles
+      .filter((record) => localized(record, locale))
+      .sort((left, right) => right.publishedAt - left.publishedAt || left.id.localeCompare(right.id))) {
+      pages.push(renderArticlePage({ model, template, locale, article }));
+    }
+  }
+
+  for (const article of model.publicArticles.filter((record) => !localized(record, "he") && localized(record, "en"))) {
+    pages.push(renderMissingTranslationPage({
+      model,
+      template,
+      article,
+      outputPath: blogRoute({ locale: "he", kind: "article", slug: localized(article, "en").slug })
+    }));
+  }
+  return pages;
+}
+
+/** Emit every deterministic, localized Blog entrypoint and return its manifest paths. */
 export async function renderBlogSite({ model, sourceDir, outputDir, version }) {
   if (!model?.settings?.locales) throw new TypeError("model must provide localized blog settings");
   const template = await readFile(resolve(sourceDir, "blog-template.html"), "utf8");
-  const pages = [];
-  for (const locale of LOCALES) {
-    const settings = model.settings;
-    if (!settings.locales[locale]) continue;
-    const outputPath = blogRoute({ locale, kind: "home" });
-    const alternateLocale = locale === "en" ? "he" : "en";
-    const alternatePath = `${alternateLocale === "he" ? "he/blog" : "blog"}/`;
-    const canonicalPath = `${locale === "he" ? "he/blog" : "blog"}/`;
-    const html = renderDocument({
-      template,
-      locale,
-      outputPath,
-      title: settings.locales[locale].title,
-      description: settings.locales[locale].summary ?? "",
-      canonicalPath,
-      alternatePath,
-      bodyClass: "blog-page blog-home-page",
-      mainHtml: renderHomeMain({ locale, settings, outputPath, version }),
-      siteOrigin: settings.siteOrigin
-    });
-    await mkdir(dirname(resolve(outputDir, outputPath)), { recursive: true });
-    await writeFile(resolve(outputDir, outputPath), html);
-    pages.push(outputPath);
+  const rendered = emitPages(model, template, version);
+  const paths = [];
+  for (const page of rendered) {
+    await mkdir(dirname(resolve(outputDir, page.outputPath)), { recursive: true });
+    await writeFile(resolve(outputDir, page.outputPath), page.html);
+    paths.push(page.outputPath);
   }
-  return pages;
+  return paths;
 }
