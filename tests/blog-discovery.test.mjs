@@ -114,3 +114,61 @@ test("renders crawlable article metadata and noindexes search and missing transl
   assert.match(search, /name="robots" content="noindex, follow"/);
   assert.match(unavailable, /name="robots" content="noindex, follow"/);
 });
+
+test("rejects redirect destinations that are not emitted public routes before redirect output", async () => {
+  const model = structuredClone(await loadRepositoryBlogModel());
+  const siteDocuments = await loadRepositorySiteDocuments();
+  model.articles[0].redirect = {
+    locale: "en",
+    oldPath: "/positivus-site/blog/retired-guide/",
+    replacementPath: "/positivus-site/blog/not-an-emitted-page/",
+    statusCode: 301,
+    reason: "Moved"
+  };
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-unresolved-redirect-"));
+
+  await assert.rejects(
+    emitDiscoveryArtifacts({ model, siteDocuments, outputDir, siteOrigin: model.settings.siteOrigin }),
+    /replacementPath does not resolve to an emitted public route/
+  );
+  await assert.rejects(readFile(resolve(outputDir, "blog/retired-guide/index.html"), "utf8"));
+});
+
+test("rejects redirect sources that collide with generated public article pages", async () => {
+  const model = structuredClone(await loadRepositoryBlogModel());
+  const siteDocuments = await loadRepositorySiteDocuments();
+  model.articles[0].redirect = {
+    locale: "en",
+    oldPath: "/positivus-site/blog/marketing-dashboard/",
+    replacementPath: "/positivus-site/blog/paid-media-budget/",
+    statusCode: 301,
+    reason: "Moved"
+  };
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-colliding-redirect-"));
+
+  await assert.rejects(
+    emitDiscoveryArtifacts({ model, siteDocuments, outputDir, siteOrigin: model.settings.siteOrigin }),
+    /redirect oldPath collides with an emitted public route/
+  );
+});
+
+test("rejects duplicate redirect source paths before either document can overwrite the other", async () => {
+  const model = structuredClone(await loadRepositoryBlogModel());
+  const siteDocuments = await loadRepositorySiteDocuments();
+  const redirect = {
+    locale: "en",
+    oldPath: "/positivus-site/blog/retired-guide/",
+    replacementPath: "/positivus-site/blog/paid-media-budget/",
+    statusCode: 301,
+    reason: "Moved"
+  };
+  model.articles[0].redirect = redirect;
+  model.articles[1].redirect = { ...redirect, replacementPath: "/positivus-site/blog/marketing-dashboard/" };
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-duplicate-redirect-"));
+
+  await assert.rejects(
+    emitDiscoveryArtifacts({ model, siteDocuments, outputDir, siteOrigin: model.settings.siteOrigin }),
+    /duplicate redirect oldPath/
+  );
+  await assert.rejects(readFile(resolve(outputDir, "blog/retired-guide/index.html"), "utf8"));
+});

@@ -201,13 +201,47 @@ function sitemapEntries(model, siteDocuments, locale, siteOrigin) {
   return entries;
 }
 
-function outputPathForRedirect(redirect, siteOrigin) {
-  const destination = new URL(redirect.oldPath, siteOrigin);
+function outputPathForInternalPath(path, siteOrigin, name) {
+  const destination = new URL(path, siteOrigin);
   const base = new URL(siteOrigin).pathname.replace(/\/$/u, "");
-  if (!destination.pathname.startsWith(`${base}/`)) throw new TypeError("redirect oldPath must be inside the site base path");
+  if (!destination.pathname.startsWith(`${base}/`)) throw new TypeError(`${name} must be inside the site base path`);
   const relative = destination.pathname.slice(base.length + 1).replace(/\/$/u, "");
-  if (!relative || relative.split("/").some((part) => !part || part === "." || part === "..")) throw new TypeError("redirect oldPath must identify a safe page");
+  if (!relative || relative.split("/").some((part) => !part || part === "." || part === "..")) throw new TypeError(`${name} must identify a safe page`);
   return `${relative}/index.html`;
+}
+
+function derivedPublicRoutePaths(model) {
+  const paths = new Set();
+  for (const locale of LOCALES) {
+    paths.add(blogRoute({ locale, kind: "home" }));
+    paths.add(blogRoute({ locale, kind: "browse" }));
+    paths.add(blogRoute({ locale, kind: "tags" }));
+    paths.add(blogRoute({ locale, kind: "authors" }));
+    for (const category of model.categories.filter((record) => localized(record, locale))) paths.add(blogRoute({ locale, kind: "category", slug: localized(category, locale).slug }));
+    for (const tag of model.tags.filter((record) => localized(record, locale))) paths.add(blogRoute({ locale, kind: "tag", slug: localized(tag, locale).slug }));
+    for (const series of model.series.filter((record) => localized(record, locale))) paths.add(blogRoute({ locale, kind: "series", slug: localized(series, locale).slug }));
+    for (const author of model.authors.filter((record) => localized(record, locale))) paths.add(blogRoute({ locale, kind: "author", slug: localized(author, locale).slug }));
+    for (const article of publicArticles(model, locale)) paths.add(articlePath(article, locale));
+  }
+  for (const article of publicArticles(model, "en").filter((record) => !localized(record, "he"))) {
+    paths.add(blogRoute({ locale: "he", kind: "article", slug: localized(article, "en").slug }));
+  }
+  return paths;
+}
+
+function validateRedirects({ model, siteOrigin, publicRoutePaths }) {
+  const publicPaths = new Set(publicRoutePaths ?? derivedPublicRoutePaths(model));
+  const sources = new Set();
+  return (model.articles ?? []).flatMap((article) => {
+    if (!article.redirect) return [];
+    const sourcePath = outputPathForInternalPath(article.redirect.oldPath, siteOrigin, "redirect oldPath");
+    const replacementPath = outputPathForInternalPath(article.redirect.replacementPath, siteOrigin, "replacementPath");
+    if (!publicPaths.has(replacementPath)) throw new Error(`redirect replacementPath does not resolve to an emitted public route: ${article.redirect.replacementPath}`);
+    if (publicPaths.has(sourcePath)) throw new Error(`redirect oldPath collides with an emitted public route: ${article.redirect.oldPath}`);
+    if (sources.has(sourcePath)) throw new Error(`duplicate redirect oldPath: ${article.redirect.oldPath}`);
+    sources.add(sourcePath);
+    return [{ outputPath: sourcePath, redirect: article.redirect }];
+  });
 }
 
 function renderRedirect({ redirect, siteOrigin }) {
@@ -226,7 +260,8 @@ async function emitFile(outputDir, outputPath, content, paths) {
 }
 
 /** Emit deterministic locale-specific search, feed, sitemap, and redirect artifacts. */
-export async function emitDiscoveryArtifacts({ model, siteDocuments, outputDir, siteOrigin }) {
+export async function emitDiscoveryArtifacts({ model, siteDocuments, outputDir, siteOrigin, publicRoutePaths }) {
+  const redirects = validateRedirects({ model, siteOrigin, publicRoutePaths });
   const paths = [];
   for (const locale of LOCALES) {
     await emitFile(outputDir, `search-index-${locale}.json`, `${JSON.stringify(createGlobalSearchIndex({ model, siteDocuments, locale }), null, 2)}\n`, paths);
@@ -241,10 +276,8 @@ export async function emitDiscoveryArtifacts({ model, siteDocuments, outputDir, 
     }
     await emitFile(outputDir, `sitemap-${locale}.xml`, renderSitemap({ entries: sitemapEntries(model, siteDocuments, locale, siteOrigin), siteOrigin }), paths);
   }
-  for (const article of model.articles ?? []) {
-    if (!article.redirect) continue;
-    const outputPath = outputPathForRedirect(article.redirect, siteOrigin);
-    await emitFile(outputDir, outputPath, renderRedirect({ redirect: article.redirect, siteOrigin }), paths);
+  for (const { outputPath, redirect } of redirects) {
+    await emitFile(outputDir, outputPath, renderRedirect({ redirect, siteOrigin }), paths);
   }
   return paths.sort();
 }

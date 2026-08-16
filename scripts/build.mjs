@@ -81,6 +81,7 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
     siteDocuments,
     outputDir,
     siteOrigin: blogModel.settings.siteOrigin,
+    publicRoutePaths: ["index.html", ...authPages.map((page) => page.filename), ...blogEntrypoints],
   });
   const generatedEntrypoints = discoveryEntrypoints(discoveryArtifacts);
 
