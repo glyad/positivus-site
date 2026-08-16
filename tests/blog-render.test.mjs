@@ -122,6 +122,28 @@ test("rejects malformed optional values, unsafe links, and unsafe asset resoluti
   assert.equal(html, "");
 });
 
+test("accepts only resolver paths rooted at assets after leading parent segments", () => {
+  const figure = { type: "figure", src: "assets/images/team/team-1.webp", alt: "A safe image" };
+  const invalidOutputs = [
+    "../../assets/../../../secret.webp",
+    "../assets/../../secret.webp",
+    "../../assets/./images/x.webp",
+    "../../assets/images/%2e%2e/secret.webp",
+    "../../assets/images/x.webp?debug=1",
+    "../../assets\\images\\x.webp",
+    "../../assets/images/\u0000x.webp"
+  ];
+
+  for (const output of invalidOutputs) {
+    assert.equal(renderBlocks([figure], { locale: "en", resolveAsset: () => output, consultation: null }), "");
+  }
+
+  for (const output of ["assets/x.webp", "../assets/x.webp", "../../assets/images/x.webp"]) {
+    const html = renderBlocks([figure], { locale: "en", resolveAsset: () => output, consultation: null });
+    assert.ok(html.includes(`src="${output}"`));
+  }
+});
+
 test("keeps structured semantics neutral for Hebrew RTL content", () => {
   const html = renderBlocks([
     { type: "faq", heading: "שאלות", items: [{ question: "למה?", answer: "כדי לקבל החלטות." }] },

@@ -50,8 +50,11 @@ function isSafeResolvedAsset(value) {
   if (typeof value !== "string" || !value || value.startsWith("/") || CONTROL_OR_BACKSLASH.test(value) ||
       /[?#]/u.test(value)) return false;
   const segments = value.split("/");
-  return segments.length > 1 && segments.includes("assets") &&
-    segments.every((segment) => segment === "." || segment === ".." || SAFE_ASSET_SEGMENT.test(segment));
+  let assetsIndex = 0;
+  while (segments[assetsIndex] === "..") assetsIndex += 1;
+  return segments[assetsIndex] === "assets" && assetsIndex < segments.length - 1 &&
+    segments.slice(assetsIndex + 1).every((segment) =>
+      segment !== "." && segment !== ".." && SAFE_ASSET_SEGMENT.test(segment));
 }
 
 function resolveLocalAsset(path, resolveAsset) {
