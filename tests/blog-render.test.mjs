@@ -459,7 +459,7 @@ test("rejects duplicate emitted routes before any page can be overwritten", asyn
 test("renders standalone localized category and author pages without an invented language peer", async () => {
   const sourceDir = resolve(repositoryRoot, "sources");
   const raw = await loadLocalBlogSource({ sourceDir });
-  raw.categories.push({ id: "solo-category", order: 8, locales: { en: { name: "Solo category", slug: "solo-category" } } });
+  raw.categories.push({ id: "solo-category", order: 8, locales: { en: { name: "Solo category", slug: "solo-category", description: "An independent category." } } });
   raw.authors.push({
     id: "solo-author",
     portrait: "assets/images/team/team-1.webp",
@@ -512,4 +512,50 @@ test("emits localized empty Blog Home states when no articles are publicly avail
   assert.match(hebrew, /חיפוש בבלוג/);
   assert.doesNotMatch(english, /data-featured-card/);
   assert.doesNotMatch(hebrew, /data-featured-card/);
+});
+
+test("orders missing-Hebrew availability pages by publication date then article ID", async () => {
+  const sourceDir = resolve(repositoryRoot, "sources");
+  const raw = await loadLocalBlogSource({ sourceDir });
+  const original = raw.articles.find((article) => article.id === "analytics-attribution-models");
+  const older = structuredClone(original);
+  older.id = "older-untranslated";
+  older.publishedAt = "2026-05-01T09:00:00.000Z";
+  older.editedAt = "2026-05-01T09:00:00.000Z";
+  older.locales.en.slug = "older-untranslated";
+  const newer = structuredClone(original);
+  newer.id = "newer-untranslated";
+  newer.publishedAt = "2026-08-01T09:00:00.000Z";
+  newer.editedAt = "2026-08-01T09:00:00.000Z";
+  newer.locales.en.slug = "newer-untranslated";
+  const sameDate = structuredClone(original);
+  sameDate.id = "alpha-untranslated";
+  sameDate.publishedAt = "2026-08-01T09:00:00.000Z";
+  sameDate.editedAt = "2026-08-01T09:00:00.000Z";
+  sameDate.locales.en.slug = "alpha-untranslated";
+  raw.articles.push(older, newer, sameDate);
+  raw.series.find((series) => series.id === original.series).articleIds.push(older.id, newer.id, sameDate.id);
+  const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00.000Z") });
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-availability-order-"));
+  const pages = await renderBlogSite({ model, sourceDir, outputDir, version: "1.2.0" });
+
+  assert.deepEqual(
+    pages.filter((path) => ["he/blog/alpha-untranslated/index.html", "he/blog/newer-untranslated/index.html", "he/blog/analytics-attribution-models/index.html", "he/blog/older-untranslated/index.html"].includes(path)),
+    ["he/blog/alpha-untranslated/index.html", "he/blog/newer-untranslated/index.html", "he/blog/analytics-attribution-models/index.html", "he/blog/older-untranslated/index.html"]
+  );
+});
+
+test("series page and article navigation follow the validated series sequence", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-series-sequence-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const [series, article] = await Promise.all([
+    readFile(resolve(outputDir, "blog/series/growth-foundations/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/sustainable-demand-system/index.html"), "utf8")
+  ]);
+  assert.ok(series.indexOf("Positioning before channels") < series.indexOf("Build a sustainable demand system"));
+  assert.ok(series.indexOf("Build a sustainable demand system") < series.indexOf("Write content briefs teams can use"));
+  assert.match(article, /rel="prev" href="\.\.\/positioning-before-channels\/index\.html"/);
+  assert.match(article, /rel="next" href="\.\.\/content-briefs\/index\.html"/);
 });

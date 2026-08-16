@@ -40,7 +40,9 @@ function emitPages(model, template, version) {
     }
   }
 
-  for (const article of model.publicArticles.filter((record) => !localized(record, "he") && localized(record, "en"))) {
+  for (const article of model.publicArticles
+    .filter((record) => !localized(record, "he") && localized(record, "en"))
+    .sort((left, right) => right.publishedAt - left.publishedAt || left.id.localeCompare(right.id))) {
     pages.push(renderMissingTranslationPage({
       model,
       template,

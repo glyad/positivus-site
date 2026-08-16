@@ -200,6 +200,8 @@ function validateLocales(record, id, collector, requiredFields) {
       const value = content[field];
       if (field === "blocks") {
         if (!Array.isArray(value) || value.length === 0) collector.add(id, locale, field, "must be a non-empty array");
+      } else if (field === "slug") {
+        if (typeof value !== "string" || !ID_PATTERN.test(value)) collector.add(id, locale, field, "must be a lowercase kebab-case route slug");
       } else if (field === "credentials") {
         if (!Array.isArray(value) || value.length === 0 || value.some((credential) => typeof credential !== "string" || !credential.trim())) {
           collector.add(id, locale, field, "must be a non-empty array of non-empty strings");
@@ -369,7 +371,7 @@ function indexRecords(records, type, collector) {
 
 function validateCollectionRecords(raw, indexes, collector) {
   for (const category of indexes.category.values()) {
-    const locales = validateLocales(category, category.id, collector, ["name", "slug"]);
+    const locales = validateLocales(category, category.id, collector, ["name", "slug", "description"]);
     if (!Number.isInteger(category.order) || category.order < 1) collector.add(category.id, "record", "order", "must be a positive integer");
     if (category.artwork && !isSafeAssetPath(category.artwork)) collector.add(category.id, "record", "artwork", "must be a safe local asset path");
     category.availableLocales = locales;
@@ -397,16 +399,16 @@ function validateCollectionRecords(raw, indexes, collector) {
     }
   }
   for (const author of indexes.author.values()) {
-    author.availableLocales = validateLocales(author, author.id, collector, ["name", "slug", "bio", "credentials"]);
+    author.availableLocales = validateLocales(author, author.id, collector, ["name", "slug", "role", "bio", "credentials"]);
     if (!isSafeAssetPath(author.portrait)) collector.add(author.id, "record", "portrait", "must be a safe local asset path");
     validateAuthorExpertise(author, indexes, collector);
     validateProfessionalLinks(author, collector);
   }
   for (const series of indexes.series.values()) {
-    series.availableLocales = validateLocales(series, series.id, collector, ["title", "slug"]);
+    series.availableLocales = validateLocales(series, series.id, collector, ["title", "slug", "description"]);
     if (series.artwork && !isSafeAssetPath(series.artwork)) collector.add(series.id, "record", "artwork", "must be a safe local asset path");
-    if (!Array.isArray(series.articleIds)) {
-      collector.add(series.id, "record", "articleIds", "must be an array of valid unique article IDs");
+    if (!Array.isArray(series.articleIds) || series.articleIds.length === 0) {
+      collector.add(series.id, "record", "articleIds", "must be a non-empty array of valid unique article IDs");
     } else {
       if (new Set(series.articleIds).size !== series.articleIds.length) collector.add(series.id, "record", "articleIds", "must not contain duplicate article IDs");
       series.articleIds.forEach((articleId, index) => {
@@ -430,6 +432,28 @@ function validateCollectionRecords(raw, indexes, collector) {
   validateLocalizedSlugs([...indexes.tag.values()], "tag", collector);
   validateLocalizedSlugs([...indexes.author.values()], "author", collector);
   validateLocalizedSlugs([...indexes.series.values()], "series", collector);
+}
+
+function validateSeriesMembership(indexes, collector) {
+  for (const series of indexes.series.values()) {
+    if (!Array.isArray(series.articleIds)) continue;
+    series.articleIds.forEach((articleId, index) => {
+      const article = indexes.article.get(articleId);
+      if (article && article.series !== series.id) {
+        collector.add(series.id, "record", `articleIds[${index}]`, `article ${articleId} must reference this series`);
+      }
+    });
+  }
+
+  for (const article of indexes.article.values()) {
+    if (typeof article.series !== "string") continue;
+    const series = indexes.series.get(article.series);
+    if (!series) continue;
+    const entries = Array.isArray(series.articleIds) ? series.articleIds : [];
+    if (entries.filter((articleId) => articleId === article.id).length !== 1) {
+      collector.add(article.id, "record", "series", `must be listed exactly once in series ${article.series}`);
+    }
+  }
 }
 
 function validateArticleLocaleRelationships(article, locales, indexes, collector) {
@@ -534,7 +558,7 @@ export function createBlogModel(raw, { now = new Date() } = {}) {
     if (typeof content.settings.id !== "string" || !ID_PATTERN.test(content.settings.id)) {
       collector.add(content.settings.id ?? "blog", "record", "settings.id", "must be a lowercase kebab-case identifier");
     }
-    validateLocales(content.settings, content.settings.id ?? "blog", collector, ["title"]);
+    validateLocales(content.settings, content.settings.id ?? "blog", collector, ["title", "summary"]);
     validateSettingsLocation(content.settings, content.settings.id ?? "blog", collector);
   }
 
@@ -546,6 +570,7 @@ export function createBlogModel(raw, { now = new Date() } = {}) {
     article: indexRecords(content.articles, "article", collector)
   };
   validateCollectionRecords(content, indexes, collector);
+  validateSeriesMembership(indexes, collector);
   for (const article of indexes.article.values()) validateArticle(article, indexes, collector);
   validateLocalizedSlugs([...indexes.article.values()], "article", collector);
 

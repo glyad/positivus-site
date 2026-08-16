@@ -38,11 +38,11 @@ const validRaw = {
     id: "blog",
     siteOrigin: "https://content.example",
     basePath: "/",
-    locales: { en: { title: "Knowledge Hub" }, he: { title: "מרכז הידע" } }
+    locales: { en: { title: "Knowledge Hub", summary: "Practical marketing guidance." }, he: { title: "מרכז הידע", summary: "הנחיות שיווק מעשיות." } }
   },
-  categories: [{ id: "seo", order: 2, locales: { en: { name: "SEO", slug: "seo" }, he: { name: "SEO", slug: "seo" } } }],
+  categories: [{ id: "seo", order: 2, locales: { en: { name: "SEO", slug: "seo", description: "Search guidance." }, he: { name: "SEO", slug: "seo", description: "הנחיות חיפוש." } } }],
   tags: [{ id: "technical-seo", locales: { en: { name: "Technical SEO", slug: "technical-seo" }, he: { name: "SEO טכני", slug: "technical-seo" } } }],
-  authors: [{ id: "maya-chen", portrait: "assets/images/team/team-1.webp", expertise: ["seo"], locales: { en: { name: "Maya Chen", slug: "maya-chen", bio: "Growth strategist.", credentials: ["Growth strategy"] }, he: { name: "מאיה צ׳ן", slug: "maya-chen", bio: "אסטרטגית צמיחה.", credentials: ["אסטרטגיית צמיחה"] } } }],
+  authors: [{ id: "maya-chen", portrait: "assets/images/team/team-1.webp", expertise: ["seo"], locales: { en: { name: "Maya Chen", slug: "maya-chen", role: "Growth strategist", bio: "Growth strategist.", credentials: ["Growth strategy"] }, he: { name: "מאיה צ׳ן", slug: "maya-chen", role: "אסטרטגית צמיחה", bio: "אסטרטגית צמיחה.", credentials: ["אסטרטגיית צמיחה"] } } }],
   series: [],
   articles: [{
     id: "seo-audit",
@@ -268,6 +268,83 @@ test("rejects malformed author expertise and series fields before rendering", ()
   );
 });
 
+test("requires nonempty bidirectional series membership", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.series = [{
+    id: "seo-series",
+    articleIds: [],
+    audiences: ["practitioners"],
+    level: "intermediate",
+    locales: {
+      en: { title: "SEO series", slug: "seo-series", description: "A useful SEO sequence." },
+      he: { title: "סדרת SEO", slug: "seo-series", description: "רצף SEO שימושי." }
+    }
+  }];
+  invalid.articles[0].series = "seo-series";
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) => error instanceof AggregateError &&
+      error.errors.some((entry) => /seo-series.*articleIds/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*series/.test(entry.message))
+  );
+});
+
+test("rejects series entries whose articles point to another series", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.series = [{
+    id: "seo-series",
+    articleIds: ["seo-audit"],
+    audiences: ["practitioners"],
+    level: "intermediate",
+    locales: {
+      en: { title: "SEO series", slug: "seo-series", description: "A useful SEO sequence." },
+      he: { title: "סדרת SEO", slug: "seo-series", description: "רצף SEO שימושי." }
+    }
+  }];
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) => error instanceof AggregateError && error.errors.some((entry) => /seo-series.*articleIds\[0\]/.test(entry.message))
+  );
+});
+
+test("requires route-safe localized slugs and renderer-visible localized copy", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.settings.locales.en.summary = "";
+  invalid.categories[0].locales.en.description = "";
+  invalid.categories[0].locales.he.slug = "לא נתיב";
+  invalid.tags[0].locales.en.slug = "Not a route";
+  invalid.authors[0].locales.he.role = "";
+  invalid.authors[0].locales.en.slug = "Maya Chen";
+  invalid.articles[0].locales.en.slug = "SEO Audit";
+  invalid.series = [{
+    id: "seo-series",
+    articleIds: ["seo-audit"],
+    audiences: ["practitioners"],
+    level: "intermediate",
+    locales: {
+      en: { title: "SEO series", slug: "SEO Series", description: "" },
+      he: { title: "סדרת SEO", slug: "seo-series", description: "רצף SEO שימושי." }
+    }
+  }];
+  invalid.articles[0].series = "seo-series";
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) => error instanceof AggregateError &&
+      error.errors.some((entry) => /blog.*en.*summary/.test(entry.message)) &&
+      error.errors.some((entry) => /seo.*en.*description/.test(entry.message)) &&
+      error.errors.some((entry) => /seo.*he.*slug/.test(entry.message)) &&
+      error.errors.some((entry) => /technical-seo.*en.*slug/.test(entry.message)) &&
+      error.errors.some((entry) => /maya-chen.*he.*role/.test(entry.message)) &&
+      error.errors.some((entry) => /maya-chen.*en.*slug/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*en.*slug/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-series.*en.*description/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-series.*en.*slug/.test(entry.message))
+  );
+});
+
 test("rejects article relationships unavailable in the article locale before rendering", () => {
   const invalid = structuredClone(validRaw);
   invalid.articles[0].coAuthors = ["maya-chen"];
@@ -278,7 +355,7 @@ test("rejects article relationships unavailable in the article locale before ren
     articleIds: ["seo-audit"],
     audiences: ["practitioners"],
     level: "intermediate",
-    locales: { en: { title: "SEO series", slug: "seo-series" } }
+    locales: { en: { title: "SEO series", slug: "seo-series", description: "A useful SEO sequence." } }
   }];
   delete invalid.categories[0].locales.he;
   delete invalid.tags[0].locales.he;
