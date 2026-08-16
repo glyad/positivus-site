@@ -6,6 +6,7 @@ const DIMENSIONS = {
   duration: ["short", "medium", "long"],
   sort: ["newest", "relevance", "oldest", "updated"]
 };
+const DESKTOP_FILTER_FACETS = new Set(["category", "format", "audience", "level", "author", "duration", "from", "to"]);
 const TOKEN_BOUNDARY = /[^\p{L}\p{N}]+/u;
 const COMBINING_MARKS = /\p{M}+/gu;
 
@@ -194,6 +195,18 @@ export function drawerFocusAction({ key, index, count, shiftKey = false }) {
   if (shiftKey && index === 0) return "last";
   if (!shiftKey && index === count - 1) return "first";
   return "none";
+}
+
+/** Keep desktop updates scoped to intentional Blog filter changes. */
+export function shouldApplyDesktopFilterChange({ type, facet }) {
+  return type === "change" && DESKTOP_FILTER_FACETS.has(facet);
+}
+
+/** Supply a localized, action-oriented empty-result state without saved search data. */
+export function noResultsRecovery(locale) {
+  return locale === "he"
+    ? { message: "לא נמצאו מאמרים תואמים. נקו מסננים כדי לעיין בכל התובנות.", action: "ניקוי מסננים" }
+    : { message: "No matching articles. Clear filters to browse every insight.", action: "Clear filters" };
 }
 
 export function scoreBlogDocument(document, query) {

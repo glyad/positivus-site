@@ -45,6 +45,15 @@ export function blogRoute({ locale, kind, slug = "" }) {
   return patterns[kind];
 }
 
+/** Return an emitted, no-script fallback route for a numbered Blog browse page. */
+export function blogBrowsePageRoute({ locale, page = 1 }) {
+  if (!LOCALES.has(locale)) throw new TypeError("locale must be en or he");
+  if (!Number.isSafeInteger(page) || page < 1) throw new TypeError("page must be a positive integer");
+  if (page === 1) return blogRoute({ locale, kind: "browse" });
+  const prefix = locale === "he" ? "he/blog" : "blog";
+  return `${prefix}/search/page/${page}/index.html`;
+}
+
 /** Resolve a GitHub Pages-safe link between two emitted files. */
 export function relativeSitePath(fromOutputPath, targetOutputPath) {
   assertOutputPath(fromOutputPath, "fromOutputPath");

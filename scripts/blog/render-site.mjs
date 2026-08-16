@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
-import { blogRoute } from "./routes.mjs";
+import { blogBrowsePageRoute, blogRoute } from "./routes.mjs";
 import {
   renderArticlePage,
   renderAuthorPage,
@@ -28,7 +28,17 @@ function emitPages(model, template, version) {
   for (const locale of LOCALES) {
     pages.push(renderSiteSearchFallbackPage({ model, template, locale }));
     pages.push(renderBlogHome({ model, template, locale, version }));
-    pages.push(renderBrowsePage({ model, template, locale }));
+    const browsePages = Math.max(1, Math.ceil((model.publicArticles ?? []).filter((article) => localized(article, locale)).length / 12));
+    const peerBrowsePages = Math.max(1, Math.ceil((model.publicArticles ?? []).filter((article) => localized(article, locale === "en" ? "he" : "en")).length / 12));
+    for (let page = 1; page <= browsePages; page += 1) {
+      pages.push(renderBrowsePage({
+        model,
+        template,
+        locale,
+        page,
+        alternateOutputPath: page <= peerBrowsePages ? blogBrowsePageRoute({ locale: locale === "en" ? "he" : "en", page }) : null
+      }));
+    }
     pages.push(renderTagIndexPage({ model, template, locale }));
     for (const category of model.categories.filter((record) => localized(record, locale))) pages.push(renderCategoryPage({ model, template, locale, category }));
     for (const tag of model.tags.filter((record) => localized(record, locale)).sort(byLocalizedName(locale))) pages.push(renderTagPage({ model, template, locale, tag }));

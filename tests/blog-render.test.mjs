@@ -260,6 +260,38 @@ test("browse starts with twelve stable cards and accessible numbered pagination"
   assert.match(html, /aria-current="page"/);
 });
 
+test("uses localized publication From and To labels rather than an edit-date label", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-publication-range-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+  const [english, hebrew] = await Promise.all([
+    readFile(resolve(outputDir, "blog/search/index.html"), "utf8"),
+    readFile(resolve(outputDir, "he/blog/search/index.html"), "utf8")
+  ]);
+  assert.match(english, /data-filter-from[^>]*type="date"/);
+  assert.match(english, /Published from.*data-filter-from/s);
+  assert.match(english, /Published through.*data-filter-to/s);
+  assert.match(hebrew, /פורסם מתאריך.*data-filter-from/s);
+  assert.match(hebrew, /פורסם עד תאריך.*data-filter-to/s);
+});
+
+test("emits a second static browse page with the later article slice and native page links", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-page-two-"));
+  const pages = await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+  assert.ok(pages.includes("blog/search/page/2/index.html"));
+  const [first, second] = await Promise.all([
+    readFile(resolve(outputDir, "blog/search/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/search/page/2/index.html"), "utf8")
+  ]);
+  const ordered = [...model.publicArticles].filter((article) => article.locales.en).sort((left, right) => right.publishedAt - left.publishedAt || left.id.localeCompare(right.id));
+  assert.doesNotMatch(first, new RegExp(ordered[12].locales.en.title));
+  assert.match(second, new RegExp(ordered[12].locales.en.title));
+  assert.match(second, /href="\.\.\/\.\.\/index\.html"/);
+  assert.match(first, /href="page\/2\/index\.html"/);
+  assert.match(second, /aria-current="page">2/);
+});
+
 test("browse and author pages expose progressive enhancement contracts without replacing server content", async () => {
   const model = await loadRepositoryBlogModel();
   const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-enhancement-"));

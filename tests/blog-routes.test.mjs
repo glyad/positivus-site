@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import test from "node:test";
 
 import { repositoryRoot } from "../scripts/build.mjs";
-import { blogRoute, relativeSitePath } from "../scripts/blog/routes.mjs";
+import { blogBrowsePageRoute, blogRoute, relativeSitePath } from "../scripts/blog/routes.mjs";
 import { renderDocument } from "../scripts/blog/render-shell.mjs";
 import { renderBlogSite } from "../scripts/blog/render-site.mjs";
 import { loadRepositoryBlogModel } from "./helpers/blog-fixture.mjs";
@@ -21,6 +21,8 @@ test("maps English and Hebrew blog peers to stable nested routes", () => {
   assert.equal(blogRoute({ locale: "en", kind: "article", slug: "seo-audit" }), "blog/seo-audit/index.html");
   assert.equal(blogRoute({ locale: "he", kind: "article", slug: "seo-audit" }), "he/blog/seo-audit/index.html");
   assert.equal(blogRoute({ locale: "he", kind: "authors" }), "he/blog/authors/index.html");
+  assert.equal(blogBrowsePageRoute({ locale: "en", page: 2 }), "blog/search/page/2/index.html");
+  assert.equal(blogBrowsePageRoute({ locale: "he", page: 2 }), "he/blog/search/page/2/index.html");
   assert.equal(relativeSitePath("he/blog/seo-audit/index.html", "index.html"), "../../../index.html");
   assert.equal(relativeSitePath("blog/index.html", "he/blog/index.html"), "../he/blog/index.html");
 });

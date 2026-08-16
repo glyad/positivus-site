@@ -85,6 +85,7 @@ test("build manifest lists emitted editorial routes, including the explicit miss
   const manifest = JSON.parse(await readFile(resolve(outputDir, "manifest.json"), "utf8"));
   const required = [
     "blog/search/index.html",
+    "blog/search/page/2/index.html",
     "blog/category/seo/index.html",
     "blog/tag/technical-seo/index.html",
     "blog/series/growth-foundations/index.html",

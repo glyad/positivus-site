@@ -1,8 +1,10 @@
 import {
   drawerFocusAction,
   filterBlogDocuments,
+  noResultsRecovery,
   paginate,
   parseBlogSearchState,
+  shouldApplyDesktopFilterChange,
   sortBlogDocuments
 } from "./blog-core.mjs";
 
@@ -169,7 +171,20 @@ function initBrowse(root) {
     const query = queryFromState(state).toString();
     history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}`);
     applyStateToControls(root, state);
-    grid?.replaceChildren(...page.items.map((article) => articleCard(root, article)));
+    if (grid) {
+      if (page.total) grid.replaceChildren(...page.items.map((article) => articleCard(root, article)));
+      else {
+        const recovery = noResultsRecovery(locale());
+        const message = document.createElement("p");
+        message.textContent = recovery.message;
+        const clear = document.createElement("button");
+        clear.type = "button";
+        clear.dataset.clearBlogFilters = "";
+        clear.textContent = recovery.action;
+        clear.addEventListener("click", () => update(parseBlogSearchState("", documents), { moveFocus: true }));
+        grid.replaceChildren(message, clear);
+      }
+    }
     if (count) count.textContent = `${page.total} ${blogCopy().results}`;
     renderChips(root, state, update);
     renderPagination(root, page, update);
@@ -185,9 +200,16 @@ function initBrowse(root) {
       if (!Array.isArray(payload) || payload.some((document) => document?.type !== "article")) throw new TypeError("Blog index must contain articles only");
       documents = payload;
       state = parseBlogSearchState(location.search, documents);
+      state.page = Math.max(1, Number.parseInt(root.dataset.blogStaticPage ?? "", 10) || state.page);
       update();
       root.querySelector("[data-blog-search-form]")?.addEventListener("submit", (event) => { event.preventDefault(); update(stateFromControls(root, documents, state), { moveFocus: true }); });
       root.querySelector("[data-blog-sort]")?.addEventListener("change", () => update(stateFromControls(root, documents, state)));
+      for (const control of root.querySelector("[data-filter-panel]")?.querySelectorAll("select, input") ?? []) {
+        const facet = [...FACETS, "from", "to"].find((name) => control.hasAttribute(`data-filter-${name}`));
+        control.addEventListener("change", (event) => {
+          if (shouldApplyDesktopFilterChange({ type: event.type, facet })) update(stateFromControls(root, documents, state));
+        });
+      }
       toggle?.addEventListener("click", openDrawer);
       drawer?.querySelector("[data-filter-apply]")?.addEventListener("click", () => { closeDrawer({ restore: false }); update(stateFromControls(root, documents, state, drawer), { moveFocus: true }); });
       drawer?.querySelector("[data-filter-clear]")?.addEventListener("click", () => update(parseBlogSearchState("", documents)));

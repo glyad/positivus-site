@@ -1,6 +1,6 @@
 import { renderBlocks } from "./render-blocks.mjs";
 import { articleStructuredData } from "./discovery.mjs";
-import { blogRoute, relativeSitePath } from "./routes.mjs";
+import { blogBrowsePageRoute, blogRoute, relativeSitePath } from "./routes.mjs";
 import { escapeAttribute, escapeHtml, renderDocument } from "./render-shell.mjs";
 
 const copy = {
@@ -22,7 +22,7 @@ const copy = {
     noResults: "Search the blog", noResultsBody: "Use the search and filters to find practical marketing guidance.",
     home: "Knowledge Hub", category: "Category", tag: "Topic", author: "Author", searchPlaceholder: "Search titles, topics, and authors",
     tagIndex: "All topics", backToTagIndex: "Browse all topics", relatedCategories: "Related categories", formats: "Formats", levels: "Levels", apply: "Apply",
-    featuredInCategory: "Featured in this category", remainingInCategory: "More in this category", articles: "Articles", guides: "Guides", seriesCount: "Series", authorSearch: "Find an author", authorExpertise: "Expertise", showTopics: "Show topics",
+    featuredInCategory: "Featured in this category", remainingInCategory: "More in this category", articles: "Articles", guides: "Guides", seriesCount: "Series", authorSearch: "Find an author", authorExpertise: "Expertise", showTopics: "Show topics", publishedFrom: "Published from", publishedThrough: "Published through",
     empty: "New insights are on the way", emptyBody: "Search the blog or browse our topics while we prepare the next practical guide.",
     siteSearch: "Search Positivus", siteSearchBody: "Browse our services, case studies, and practical marketing guides.", services: "Services", useCases: "Case studies"
   },
@@ -44,7 +44,7 @@ const copy = {
     noResults: "חיפוש בבלוג", noResultsBody: "השתמשו בחיפוש ובמסננים כדי למצוא הנחיות שיווק מעשיות.",
     home: "מרכז הידע", category: "קטגוריה", tag: "נושא", author: "כותב", searchPlaceholder: "חיפוש בכותרות, נושאים וכותבים",
     tagIndex: "כל הנושאים", backToTagIndex: "לכל הנושאים", relatedCategories: "קטגוריות קשורות", formats: "פורמטים", levels: "רמות", apply: "החלה",
-    featuredInCategory: "נבחר בקטגוריה", remainingInCategory: "עוד בקטגוריה", articles: "מאמרים", guides: "מדריכים", seriesCount: "סדרות", authorSearch: "חיפוש כותב", authorExpertise: "מומחיות", showTopics: "הצגת נושאים",
+    featuredInCategory: "נבחר בקטגוריה", remainingInCategory: "עוד בקטגוריה", articles: "מאמרים", guides: "מדריכים", seriesCount: "סדרות", authorSearch: "חיפוש כותב", authorExpertise: "מומחיות", showTopics: "הצגת נושאים", publishedFrom: "פורסם מתאריך", publishedThrough: "פורסם עד תאריך",
     empty: "תובנות חדשות בדרך", emptyBody: "חפשו בבלוג או עיינו בנושאים שלנו בזמן שאנחנו מכינים את המדריך המעשי הבא.",
     siteSearch: "חיפוש בפוזיטיבוס", siteSearchBody: "עיינו בשירותים שלנו, במקרי הבוחן ובמדריכי השיווק המעשיים.", services: "שירותים", useCases: "מקרי בוחן"
   }
@@ -264,10 +264,13 @@ ${articleSections}
   return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "home" }), title: settings.title, description: settings.summary, mainHtml, bodyClass: "blog-page blog-home-page" });
 }
 
-function renderPagination({ locale, articleCount }) {
+function renderPagination({ locale, outputPath, articleCount, page = 1 }) {
   const ui = copy[locale];
   const pages = Math.max(1, Math.ceil(articleCount / 12));
-  return `<nav aria-label="${text(ui.page)}" data-pagination><ol>${Array.from({ length: pages }, (_, index) => `<li><a href="?page=${index + 1}"${index === 0 ? " aria-current=\"page\"" : ""}>${index + 1}</a></li>`).join("")}</ol></nav>`;
+  return `<nav aria-label="${text(ui.page)}" data-pagination><ol>${Array.from({ length: pages }, (_, index) => {
+    const number = index + 1;
+    return `<li><a href="${escapeAttribute(href(outputPath, blogBrowsePageRoute({ locale, page: number })))}"${number === page ? " aria-current=\"page\"" : ""}>${number}</a></li>`;
+  }).join("")}</ol></nav>`;
 }
 
 function renderFilterOptions(records, locale, valueOf, labelOf) {
@@ -283,20 +286,22 @@ function renderBrowseFilters({ model, locale, articles }) {
   const controls = (prefix) => {
     const select = (id, label, options, legacy = "") => `<label for="${prefix}-filter-${id}">${text(label)}<select id="${prefix}-filter-${id}" data-filter-${id}${legacy ? ` data-filter-${legacy}` : ""} multiple>${options}</select></label>`;
     const date = (id, label, legacy = "") => `<label for="${prefix}-filter-${id}">${text(label)}<input id="${prefix}-filter-${id}" data-filter-${id}${legacy ? ` data-filter-${legacy}` : ""} type="date" /></label>`;
-    return `${select("category", ui.category, renderFilterOptions(model.categories.filter((category) => localized(category, locale)), locale, (category) => category.id, (category) => localized(category, locale).name))}${select("format", ui.format, formats.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("audience", ui.audience, audiences.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("level", ui.level, levels.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("author", ui.author, renderFilterOptions(authors, locale, (author) => author.id, (author) => localized(author, locale).name))}${select("duration", ui.read, `<option value="short">${text(locale === "he" ? "1–5 דקות" : "1–5 minutes")}</option><option value="medium">${text(locale === "he" ? "6–10 דקות" : "6–10 minutes")}</option><option value="long">${text(locale === "he" ? "11+ דקות" : "11+ minutes")}</option>`, "reading-duration")}${date("from", ui.published, "publication-date")}${date("to", ui.updated)}`;
+    return `${select("category", ui.category, renderFilterOptions(model.categories.filter((category) => localized(category, locale)), locale, (category) => category.id, (category) => localized(category, locale).name))}${select("format", ui.format, formats.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("audience", ui.audience, audiences.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("level", ui.level, levels.map((value) => `<option value="${escapeAttribute(value)}">${text(dimension(value, locale))}</option>`).join(""))}${select("author", ui.author, renderFilterOptions(authors, locale, (author) => author.id, (author) => localized(author, locale).name))}${select("duration", ui.read, `<option value="short">${text(locale === "he" ? "1–5 דקות" : "1–5 minutes")}</option><option value="medium">${text(locale === "he" ? "6–10 דקות" : "6–10 minutes")}</option><option value="long">${text(locale === "he" ? "11+ דקות" : "11+ minutes")}</option>`, "reading-duration")}${date("from", ui.publishedFrom, "publication-date")}${date("to", ui.publishedThrough)}`;
   };
   return `<aside aria-label="${text(ui.filters)}" data-filter-panel><h2>${text(ui.filters)}</h2><button type="button" data-filter-toggle aria-expanded="false">${text(ui.filters)}</button><div data-active-filters aria-live="polite">${text(ui.activeFilters)}: 0</div><div data-filter-controls>${controls("desktop")}</div></aside><div data-filter-drawer role="dialog" aria-modal="true" aria-label="${text(ui.filters)}" hidden tabindex="-1"><div data-active-filters aria-live="polite">${text(ui.activeFilters)}: 0</div><div data-filter-controls>${controls("drawer")}</div><button type="button" data-filter-apply>${text(ui.apply)}</button><button type="button" data-filter-clear>${text(ui.clear)}</button></div>`;
 }
 
-export function renderBrowsePage({ model, template, locale, outputPath = blogRoute({ locale, kind: "browse" }) }) {
+export function renderBrowsePage({ model, template, locale, page = 1, outputPath = blogBrowsePageRoute({ locale, page }), alternateOutputPath = blogBrowsePageRoute({ locale: otherLocale(locale), page }) }) {
   const ui = copy[locale];
   const articles = articlesFor(model, locale);
+  const pages = Math.max(1, Math.ceil(articles.length / 12));
+  const currentPage = Math.min(Math.max(1, page), pages);
   const index = href(outputPath, `blog/search-index-${locale}.json`);
-  const mainHtml = `<section class="shell" data-blog-browse data-blog-index="${escapeAttribute(index)}"><h1 id="page-title">${text(ui.allInsights)}</h1>${renderSearch({ locale, outputPath })}
+  const mainHtml = `<section class="shell" data-blog-browse data-blog-static-page="${currentPage}" data-blog-index="${escapeAttribute(index)}"><h1 id="page-title">${text(ui.allInsights)}</h1>${renderSearch({ locale, outputPath })}
   ${renderBrowseFilters({ model, locale, articles })}
   <label>${text(ui.sort)} <select data-blog-sort><option value="newest">${text(ui.newest)}</option><option value="relevance">${text(ui.relevance)}</option><option value="oldest">${text(ui.oldest)}</option><option value="updated">${text(ui.updatedSort)}</option></select></label><h2 data-results-heading tabindex="-1">${text(ui.allInsights)}</h2><p data-result-count aria-live="polite">${articles.length} ${text(ui.results)}</p>
-  ${cards({ model, locale, outputPath, articles: articles.slice(0, 12) })}${renderPagination({ locale, articleCount: articles.length })}${renderTagCloud({ model, locale, outputPath })}</section>`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "browse" }), title: ui.allInsights, description: ui.noResultsBody, mainHtml, robots: "noindex, follow" });
+  ${cards({ model, locale, outputPath, articles: articles.slice((currentPage - 1) * 12, currentPage * 12) })}${renderPagination({ locale, outputPath, articleCount: articles.length, page: currentPage })}${renderTagCloud({ model, locale, outputPath })}</section>`;
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath, title: ui.allInsights, description: ui.noResultsBody, mainHtml, robots: "noindex, follow" });
 }
 
 export function renderCategoryPage({ model, template, locale, category, outputPath = blogRoute({ locale, kind: "category", slug: localized(category, locale).slug }) }) {

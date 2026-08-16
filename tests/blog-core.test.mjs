@@ -5,10 +5,12 @@ import {
   drawerFocusAction,
   filterAuthors,
   filterBlogDocuments,
+  noResultsRecovery,
   paginate,
   parseBlogSearchState,
   relatedArticleIds,
   sortBlogDocuments
+  ,shouldApplyDesktopFilterChange
 } from "../sources/js/blog-core.mjs";
 import { createBlogSearchIndex } from "../scripts/blog/discovery.mjs";
 import { loadRepositoryBlogModel } from "./helpers/blog-fixture.mjs";
@@ -77,4 +79,15 @@ test("keeps mobile drawer tab focus inside the first and last focusable controls
   assert.equal(drawerFocusAction({ key: "Tab", index: 2, count: 3, shiftKey: false }), "first");
   assert.equal(drawerFocusAction({ key: "Escape", index: 1, count: 3, shiftKey: false }), "close");
   assert.equal(drawerFocusAction({ key: "Tab", index: 1, count: 3, shiftKey: false }), "none");
+});
+
+test("applies desktop facet changes but not unrelated input events", () => {
+  assert.equal(shouldApplyDesktopFilterChange({ type: "change", facet: "category" }), true);
+  assert.equal(shouldApplyDesktopFilterChange({ type: "input", facet: "category" }), false);
+  assert.equal(shouldApplyDesktopFilterChange({ type: "change", facet: "unrelated" }), false);
+});
+
+test("returns localized zero-result guidance with a clear-filters recovery action", () => {
+  assert.deepEqual(noResultsRecovery("en"), { message: "No matching articles. Clear filters to browse every insight.", action: "Clear filters" });
+  assert.deepEqual(noResultsRecovery("he"), { message: "לא נמצאו מאמרים תואמים. נקו מסננים כדי לעיין בכל התובנות.", action: "ניקוי מסננים" });
 });
