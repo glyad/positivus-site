@@ -4,11 +4,34 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 
+import { repositoryRoot } from "../scripts/build.mjs";
 import { loadLocalBlogSource } from "../scripts/blog/local-json-adapter.mjs";
 import {
   calculateReadingMinutes,
   createBlogModel
 } from "../scripts/blog/schema.mjs";
+
+test("repository fixtures cover the approved taxonomy and pagination boundary", async () => {
+  const raw = await loadLocalBlogSource({ sourceDir: resolve(repositoryRoot, "sources") });
+  const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00Z") });
+
+  assert.deepEqual(model.categories.map((category) => category.id), [
+    "strategy-growth",
+    "seo",
+    "paid-media",
+    "content-creative",
+    "social-media",
+    "email-lifecycle",
+    "analytics-optimization"
+  ]);
+  assert.ok(model.articles.filter((article) => article.availableLocales.includes("en")).length > 12);
+  assert.ok(model.articles.filter((article) => article.availableLocales.includes("he")).length > 12);
+  assert.ok(model.articles.some((article) => article.availableLocales.length === 1));
+  assert.ok(model.articles.some((article) => article.tags.length > 1));
+  assert.ok(model.tags.length >= 18);
+  assert.equal(model.authors.length, 4);
+  assert.equal(model.series.length, 2);
+});
 
 const validRaw = {
   settings: { id: "blog", locales: { en: { title: "Knowledge Hub" }, he: { title: "מרכז הידע" } } },
