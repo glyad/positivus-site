@@ -384,8 +384,8 @@ ul {
 }
 
 [data-site-search-dialog] {
-  width: min(100% - 32px, 960px);
-  max-height: min(100% - 32px, 760px);
+  width: min(100% - 64px, 1240px);
+  max-height: min(100% - 64px, 760px);
   padding: 28px;
   border: 2px solid var(--black);
   border-radius: 28px;

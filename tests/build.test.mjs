@@ -64,6 +64,27 @@ test("build creates the deployable static site", async () => {
   assert.match(fallbackHtml, /action="index\.html" method="get" role="search"/);
 });
 
+test("blog pages load the editorial stylesheet after shared styles without leaking it to landing pages", async () => {
+  const outputDir = await buildSite();
+  const [blogHtml, landingHtml, blogStyles] = await Promise.all([
+    readFile(resolve(outputDir, "blog/index.html"), "utf8"),
+    readFile(resolve(outputDir, "index.html"), "utf8"),
+    readFile(resolve(outputDir, "css/blog.css"), "utf8")
+  ]);
+
+  assert.ok(
+    blogHtml.indexOf('href="../css/main.css"') < blogHtml.indexOf('href="../css/blog.css"'),
+    "blog pages must layer blog.css after main.css"
+  );
+  assert.doesNotMatch(landingHtml, /css\/blog\.css/);
+  assert.match(blogStyles, /\.blog-card\s*\{[\s\S]*border-radius:\s*var\(--radius-card\)/);
+  assert.match(blogStyles, /\.blog-card\s*\{[\s\S]*box-shadow:\s*var\(--shadow-card\)/);
+  assert.match(blogStyles, /\.article-body\s*\{[\s\S]*max-inline-size:\s*70ch/);
+  assert.match(blogStyles, /@media\s*\(max-width:\s*759px\)[\s\S]*\[data-filter-drawer\]/);
+  assert.match(blogStyles, /@media\s*\(prefers-reduced-motion:\s*reduce\)/);
+  assert.match(blogStyles, /@media\s+print/);
+});
+
 test("build manifest tracks the package version", async () => {
   await buildSite();
   const manifest = JSON.parse(
