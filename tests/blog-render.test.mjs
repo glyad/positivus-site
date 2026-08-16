@@ -260,6 +260,33 @@ test("browse starts with twelve stable cards and accessible numbered pagination"
   assert.match(html, /aria-current="page"/);
 });
 
+test("browse and author pages expose progressive enhancement contracts without replacing server content", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-enhancement-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+  const [browse, authors] = await Promise.all([
+    readFile(resolve(outputDir, "he/blog/search/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/authors/index.html"), "utf8")
+  ]);
+  assert.match(browse, /data-blog-browse[^>]*data-blog-index="\.\.\/\.\.\/\.\.\/blog\/search-index-he\.json"/);
+  assert.match(browse, /data-results-heading/);
+  assert.match(authors, /data-author-directory/);
+  assert.match(authors, /data-author-query/);
+  assert.match(authors, /data-author-expertise/);
+  assert.equal((authors.match(/data-author-card/g) ?? []).length, model.authors.length);
+});
+
+test("tag clouds give exact localized counts a semantic label, bounded weight, and a compact disclosure", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-tag-cloud-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+  const html = await readFile(resolve(outputDir, "blog/index.html"), "utf8");
+  assert.match(html, /data-tag-cloud-toggle/);
+  assert.match(html, /data-tag-cloud-list/);
+  assert.match(html, /class="tag-weight-[1-5]"/);
+  assert.match(html, /aria-label="Technical SEO: 2 articles"/);
+});
+
 test("article TOC targets only rendered headed blocks when an unheaded block comes first", async () => {
   const sourceDir = resolve(repositoryRoot, "sources");
   const raw = await loadLocalBlogSource({ sourceDir });
