@@ -383,7 +383,12 @@ export function createBlogModel(raw, { now = new Date() } = {}) {
   // source; callers may reuse it for another deterministic build.
   const content = structuredClone(raw);
   if (!isObject(content.settings)) collector.add("blog", "record", "settings", "must be an object");
-  else validateLocales(content.settings, content.settings.id ?? "blog", collector, ["title"]);
+  else {
+    if (typeof content.settings.id !== "string" || !ID_PATTERN.test(content.settings.id)) {
+      collector.add(content.settings.id ?? "blog", "record", "settings.id", "must be a lowercase kebab-case identifier");
+    }
+    validateLocales(content.settings, content.settings.id ?? "blog", collector, ["title"]);
+  }
 
   const indexes = {
     category: indexRecords(content.categories, "category", collector),

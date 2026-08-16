@@ -61,6 +61,16 @@ test("loads the local JSON CMS source and orders article fixtures by filename", 
   }
 });
 
+test("rejects malformed blog settings IDs with contextual aggregate errors", () => {
+  const invalid = structuredClone(validRaw);
+  invalid.settings.id = "BAD!";
+
+  assert.throws(
+    () => createBlogModel(invalid),
+    (error) => error instanceof AggregateError && error.errors.some((entry) => /BAD!.*settings\.id/.test(entry.message))
+  );
+});
+
 test("creates lookup indexes and derived reading time", () => {
   const model = createBlogModel(validRaw, { now: new Date("2026-08-15T00:00:00Z") });
   assert.deepEqual(model.byId.article.get("seo-audit").readingMinutes, { en: 1, he: 1 });
