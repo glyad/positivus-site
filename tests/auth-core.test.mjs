@@ -9,7 +9,8 @@ import {
   passwordIssue,
   providerFromSearch,
   providerStateFromSearch,
-  safeReturnPath
+  safeReturnPath,
+  withSafeReturnPath
 } from "../sources/js/auth-core.mjs";
 
 test("email validation accepts normal addresses and rejects malformed input", () => {
@@ -56,4 +57,15 @@ test("allows only local blog article return paths", () => {
   assert.equal(safeReturnPath("https://example.com"), "");
   assert.equal(safeReturnPath("javascript:alert(1)"), "");
   assert.equal(safeReturnPath("blog/seo-audit/index.html?commenter=other#comments"), "");
+});
+
+test("keeps a validated comment return through social retry and email fallback paths", () => {
+  const article = "blog/seo-audit/index.html?commenter=demo#comments";
+  const retry = withSafeReturnPath("social-auth.html?provider=google", article);
+  const email = withSafeReturnPath("sign-in.html", article);
+  assert.equal(retry, "social-auth.html?provider=google&return=blog%2Fseo-audit%2Findex.html%3Fcommenter%3Ddemo%23comments");
+  assert.equal(email, "sign-in.html?return=blog%2Fseo-audit%2Findex.html%3Fcommenter%3Ddemo%23comments");
+  assert.equal(withSafeReturnPath("account.html", new URLSearchParams(retry.split("?", 2)[1]).get("return")), "account.html?return=blog%2Fseo-audit%2Findex.html%3Fcommenter%3Ddemo%23comments");
+  assert.equal(withSafeReturnPath("account.html", new URLSearchParams(email.split("?", 2)[1]).get("return")), "account.html?return=blog%2Fseo-audit%2Findex.html%3Fcommenter%3Ddemo%23comments");
+  assert.equal(withSafeReturnPath("sign-in.html", "https://example.com"), "sign-in.html");
 });

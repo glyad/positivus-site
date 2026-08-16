@@ -6,6 +6,22 @@ export function safeReturnPath(value) {
   return /^(?:he\/)?blog\/[a-z0-9]+(?:-[a-z0-9]+)*\/index\.html\?commenter=demo#comments$/u.test(path) ? path : "";
 }
 
+/** Add a validated article return to a local fake-auth continuation URL. */
+export function withSafeReturnPath(href, returnPath) {
+  const original = String(href ?? "");
+  const safePath = safeReturnPath(returnPath);
+  if (!safePath) return original;
+  try {
+    const base = "https://positivus.invalid/";
+    const target = new URL(original, base);
+    if (target.origin !== base.slice(0, -1)) return original;
+    target.searchParams.set("return", safePath);
+    return `${target.pathname.slice(1)}${target.search}${target.hash}`;
+  } catch {
+    return original;
+  }
+}
+
 export function isValidEmail(value) {
   const email = value.trim();
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(email);

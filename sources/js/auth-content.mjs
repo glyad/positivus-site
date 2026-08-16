@@ -180,13 +180,13 @@ const submitButton = (key) => `<button class="auth-submit" type="submit" data-su
 const divider = () => `<div class="auth-divider"><span>${text("orContinueWith")}</span></div>`;
 
 const socialButtons = () => `<div class="auth-social" role="group" aria-label="Social sign-in" data-i18n-aria-label="socialSignIn">
-  <a class="auth-social__button" href="social-auth.html?provider=google">
+  <a class="auth-social__button" href="social-auth.html?provider=google" data-auth-social-flow-link>
     <img src="assets/icons/auth/google.svg" alt="" width="20" height="20" />${text("continueGoogle")}
   </a>
-  <a class="auth-social__button" href="social-auth.html?provider=apple">
+  <a class="auth-social__button" href="social-auth.html?provider=apple" data-auth-social-flow-link>
     <img src="assets/icons/auth/apple.svg" alt="" width="20" height="20" />${text("continueApple")}
   </a>
-  <a class="auth-social__button" href="social-auth.html?provider=facebook">
+  <a class="auth-social__button" href="social-auth.html?provider=facebook" data-auth-social-flow-link>
     <img src="assets/icons/auth/facebook.svg" alt="" width="20" height="20" />${text("continueFacebook")}
   </a>
 </div>`;
@@ -370,20 +370,20 @@ const socialAuth = authCard({
     </div>
     <p class="auth-state-copy__lead" data-i18n="connectingProviderBody">${authText.connectingProviderBody.en}</p>
     <div class="auth-provider__actions" data-provider-actions hidden>
-      <a class="auth-submit" href="account.html" data-auth-account-link>${text("continueDemo")}</a>
-      <a class="auth-back-link" href="sign-in.html">${text("cancel")}</a>
+      <a class="auth-submit" href="account.html" data-auth-social-flow-link>${text("continueDemo")}</a>
+      <a class="auth-back-link" href="sign-in.html" data-auth-social-flow-link>${text("cancel")}</a>
     </div>
   </div>
   <div class="auth-provider" data-provider-error hidden>
     ${stateArt("cloud-slash")}
     <p data-provider-error-body data-i18n="providerUnavailableBody">${authText.providerUnavailableBody.en}</p>
-    <a class="auth-submit" href="social-auth.html?provider=google">${text("tryAgain")}</a>
-    <a class="auth-back-link" href="sign-in.html">${text("useEmailInstead")}</a>
+    <a class="auth-submit" href="social-auth.html?provider=google" data-auth-social-flow-link>${text("tryAgain")}</a>
+    <a class="auth-back-link" href="sign-in.html" data-auth-social-flow-link>${text("useEmailInstead")}</a>
   </div>
   <details class="auth-demo-states">
     <summary>${text("demoStateLinks")}</summary>
-    <a href="social-auth.html?provider=google&amp;state=error">${text("previewProviderError")}</a>
-    <a href="social-auth.html?provider=google&amp;state=cancelled">${text("previewProviderCancelled")}</a>
+    <a href="social-auth.html?provider=google&amp;state=error" data-auth-social-flow-link>${text("previewProviderError")}</a>
+    <a href="social-auth.html?provider=google&amp;state=cancelled" data-auth-social-flow-link>${text("previewProviderCancelled")}</a>
   </details>`,
   modifier: "auth-card--state"
 });

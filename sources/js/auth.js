@@ -6,7 +6,8 @@ import {
   passwordIssue,
   providerFromSearch,
   providerStateFromSearch,
-  safeReturnPath
+  safeReturnPath,
+  withSafeReturnPath
 } from "./auth-core.mjs";
 import { authPages, authText } from "./auth-content.mjs";
 
@@ -420,10 +421,8 @@ if (returnToArticle && commentReturnPath) {
 }
 
 if (commentReturnPath) {
-  document.querySelectorAll(".auth-social__button, [data-auth-account-link]").forEach((link) => {
-    const target = new URL(link.href, window.location.href);
-    target.searchParams.set("return", commentReturnPath);
-    link.href = `${target.pathname.split("/").pop()}${target.search}`;
+  document.querySelectorAll("[data-auth-social-flow-link]").forEach((link) => {
+    link.href = withSafeReturnPath(link.getAttribute("href"), commentReturnPath);
   });
 }
 
