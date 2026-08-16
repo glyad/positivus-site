@@ -1,4 +1,5 @@
 import { renderBlocks } from "./render-blocks.mjs";
+import { articleStructuredData } from "./discovery.mjs";
 import { blogRoute, relativeSitePath } from "./routes.mjs";
 import { escapeAttribute, escapeHtml, renderDocument } from "./render-shell.mjs";
 
@@ -76,7 +77,7 @@ function time(date, locale) {
   return `<time datetime="${escapeAttribute(date.toISOString())}">${text(dateLabel(date, locale))}</time>`;
 }
 
-function documentPage({ model, template, locale, outputPath, alternateOutputPath, title, description, mainHtml, bodyClass = "blog-page", structuredData = [] }) {
+function documentPage({ model, template, locale, outputPath, alternateOutputPath, title, description, mainHtml, bodyClass = "blog-page", structuredData = [], robots = "index, follow", socialImage = null, socialType = "website" }) {
   const canonicalPath = outputPath.replace(/index\.html$/u, "");
   const alternatePath = alternateOutputPath === undefined
     ? peerPath({ locale: otherLocale(locale), outputPath })
@@ -86,7 +87,7 @@ function documentPage({ model, template, locale, outputPath, alternateOutputPath
     html: renderDocument({
       template, locale, outputPath, title, description, canonicalPath,
       alternatePath,
-      bodyClass, mainHtml, structuredData, siteOrigin: model.settings.siteOrigin
+      bodyClass, mainHtml, structuredData, robots, socialImage, socialType, siteOrigin: model.settings.siteOrigin
     })
   };
 }
@@ -287,7 +288,7 @@ export function renderBrowsePage({ model, template, locale, outputPath = blogRou
   ${renderBrowseFilters({ model, locale, articles })}
   <label>${text(ui.sort)} <select data-blog-sort><option value="newest">${text(ui.newest)}</option><option value="relevance">${text(ui.relevance)}</option></select></label><p data-result-count>${articles.length} ${text(ui.results)}</p>
   ${cards({ model, locale, outputPath, articles: articles.slice(0, 12) })}${renderPagination({ locale, articleCount: articles.length })}${renderTagCloud({ model, locale, outputPath })}</section>`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "browse" }), title: ui.allInsights, description: ui.noResultsBody, mainHtml });
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "browse" }), title: ui.allInsights, description: ui.noResultsBody, mainHtml, robots: "noindex, follow" });
 }
 
 export function renderCategoryPage({ model, template, locale, category, outputPath = blogRoute({ locale, kind: "category", slug: localized(category, locale).slug }) }) {
@@ -381,17 +382,27 @@ export function renderArticlePage({ model, template, locale, article, outputPath
   const anchored = anchorRenderedHeadings(body);
   const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: category.name, outputPath: blogRoute({ locale, kind: "category", slug: category.slug }) }, { label: content.title }] })}<article class="shell article-page" data-article-page itemscope itemtype="https://schema.org/Article"><header><p>${text(category.name)} · ${text(dimension(article.level, locale))}</p><h1 id="page-title" itemprop="headline">${text(content.title)}</h1><p itemprop="description">${text(content.summary)}</p>${metadata}${hero}<div class="article-tools"><button type="button" data-copy-link>${text(ui.copyLink)}</button><button type="button" data-print-article>${text(ui.print)}</button></div></header><aside data-article-toc><h2>${text(ui.tableOfContents)}</h2><ol>${anchored.headings.map((heading) => `<li><a href="#${heading.id}">${heading.label}</a></li>`).join("")}</ol></aside><div class="article-body" itemprop="articleBody">${anchored.html}</div><section data-article-tags><h2>${text(ui.tags)}</h2><ul>${tags}</ul></section>${article.correctionNote?.[locale] ? `<p data-correction-note>${text(article.correctionNote[locale])}</p>` : ""}${renderSeriesNavigation({ model, article, locale, outputPath })}<section data-related-content><h2>${text(ui.related)}</h2>${cards({ model, locale, outputPath, articles: relatedArticles(model, article, locale) })}</section>${renderNewsletterPanel({ locale })}<section data-demo-comments data-prototype="true"><h2>${text(ui.comments)}</h2><p>${text(ui.commentsBody)}</p><form><label for="demo-comment">${text(ui.addComment)}</label><textarea id="demo-comment" name="comment"></textarea><button type="button" disabled>${text(ui.addComment)}</button></form></section></article>`;
   const peer = articleRoute(article, otherLocale(locale)) ?? (locale === "en" ? blogRoute({ locale: "he", kind: "article", slug: content.slug }) : null);
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: peer, title: content.title, description: content.summary, mainHtml, structuredData: [{ "@context": "https://schema.org", "@type": "Article", headline: content.title, datePublished: article.publishedAt.toISOString(), dateModified: article.editedAt.toISOString() }] });
+  const canonicalUrl = new URL(outputPath.replace(/index\.html$/u, ""), `${model.settings.siteOrigin}/`).href;
+  const authorUrl = new URL(blogRoute({ locale, kind: "author", slug: authorContent.slug }).replace(/index\.html$/u, ""), `${model.settings.siteOrigin}/`).href;
+  const categoryUrl = new URL(blogRoute({ locale, kind: "category", slug: category.slug }).replace(/index\.html$/u, ""), `${model.settings.siteOrigin}/`).href;
+  const homeUrl = new URL(blogRoute({ locale, kind: "home" }).replace(/index\.html$/u, ""), `${model.settings.siteOrigin}/`).href;
+  const structuredData = [
+    { ...articleStructuredData({ article, locale, canonicalUrl }), image: new URL(article.hero.src, `${model.settings.siteOrigin}/`).href, author: { "@type": "Person", name: authorContent.name, url: authorUrl } },
+    { "@context": "https://schema.org", "@type": "Person", name: authorContent.name, description: authorContent.role, url: authorUrl },
+    { "@context": "https://schema.org", "@type": "BreadcrumbList", itemListElement: [{ "@type": "ListItem", position: 1, name: copy[locale].home, item: homeUrl }, { "@type": "ListItem", position: 2, name: category.name, item: categoryUrl }, { "@type": "ListItem", position: 3, name: content.title, item: canonicalUrl }] },
+    { "@context": "https://schema.org", "@type": "Organization", name: "Positivus", url: model.settings.siteOrigin }
+  ];
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: peer, title: content.title, description: content.summary, mainHtml, structuredData, socialImage: article.hero.src, socialType: "article" });
 }
 
 export function renderSearchFallbackPage({ model, template, locale, outputPath = blogRoute({ locale, kind: "browse" }) }) {
   const ui = copy[locale];
   const mainHtml = `<section class="shell" data-blog-search-fallback><h1 id="page-title">${text(ui.noResults)}</h1><p>${text(ui.noResultsBody)}</p>${renderSearch({ locale, outputPath })}</section>`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "browse" }), title: ui.noResults, description: ui.noResultsBody, mainHtml });
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: blogRoute({ locale: otherLocale(locale), kind: "browse" }), title: ui.noResults, description: ui.noResultsBody, mainHtml, robots: "noindex, follow" });
 }
 
 export function renderMissingTranslationPage({ model, template, article, outputPath }) {
   const locale = "he"; const ui = copy.he; const englishRoute = articleRoute(article, "en");
   const mainHtml = `<section class="shell" data-missing-translation><h1 id="page-title">${text(ui.unavailable)}</h1><p>${text(ui.unavailable)}</p><p><a href="${escapeAttribute(href(outputPath, englishRoute))}">${text(ui.availableEnglish)}</a></p><p><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "home" })))}">${text(ui.backToBlog)}</a></p></section>`;
-  return documentPage({ model, template, locale, outputPath, alternateOutputPath: englishRoute, title: ui.unavailable, description: ui.unavailable, mainHtml });
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath: englishRoute, title: ui.unavailable, description: ui.unavailable, mainHtml, robots: "noindex, follow" });
 }

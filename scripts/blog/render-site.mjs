@@ -66,6 +66,12 @@ function assertUniqueOutputPaths(pages) {
   if (duplicates.length) throw new Error(`Duplicate blog output paths: ${duplicates.join(", ")}`);
 }
 
+/** Return generated static documents that must be registered as deployment entrypoints. */
+export function discoveryEntrypoints(paths) {
+  if (!Array.isArray(paths)) throw new TypeError("paths must be an array");
+  return paths.filter((path) => typeof path === "string" && path.endsWith(".html")).sort();
+}
+
 /** Emit every deterministic, localized Blog entrypoint and return its manifest paths. */
 export async function renderBlogSite({ model, sourceDir, outputDir, version }) {
   if (!model?.settings?.locales) throw new TypeError("model must provide localized blog settings");

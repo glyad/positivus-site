@@ -3,8 +3,9 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { authNavigation, authPages, authText } from "../sources/js/auth-content.mjs";
+import { emitDiscoveryArtifacts } from "./blog/discovery.mjs";
 import { loadLocalBlogSource } from "./blog/local-json-adapter.mjs";
-import { renderBlogSite } from "./blog/render-site.mjs";
+import { discoveryEntrypoints, renderBlogSite } from "./blog/render-site.mjs";
 import { createBlogModel } from "./blog/schema.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
@@ -23,6 +24,9 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
   const blogModel = createBlogModel(
     await loadLocalBlogSource({ sourceDir }),
     { now: new Date() }
+  );
+  const siteDocuments = JSON.parse(
+    await readFile(resolve(sourceDir, "content", "site-search.json"), "utf8")
   );
 
   await rm(outputDir, { force: true, recursive: true });
@@ -72,12 +76,20 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
     outputDir,
     version: packageMetadata.version,
   });
+  const discoveryArtifacts = await emitDiscoveryArtifacts({
+    model: blogModel,
+    siteDocuments,
+    outputDir,
+    siteOrigin: blogModel.settings.siteOrigin,
+  });
+  const generatedEntrypoints = discoveryEntrypoints(discoveryArtifacts);
 
   const manifest = {
     name: packageMetadata.name,
     version: packageMetadata.version,
     entrypoint: "index.html",
-    entrypoints: ["index.html", ...authPages.map((page) => page.filename), ...blogEntrypoints],
+    entrypoints: ["index.html", ...authPages.map((page) => page.filename), ...blogEntrypoints, ...generatedEntrypoints],
+    files: [...blogEntrypoints, ...discoveryArtifacts],
     source: "sources",
   };
 

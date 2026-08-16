@@ -81,3 +81,22 @@ test("build manifest lists emitted editorial routes, including the explicit miss
     assert.equal((await stat(resolve(outputDir, outputPath))).isFile(), true);
   }
 });
+
+test("build emits discovery files without registering JSON or XML as entrypoints", async () => {
+  const outputDir = await buildSite();
+  const manifest = JSON.parse(await readFile(resolve(outputDir, "manifest.json"), "utf8"));
+  const artifacts = [
+    "search-index-en.json",
+    "search-index-he.json",
+    "blog/search-index-en.json",
+    "blog/search-index-he.json",
+    "blog/rss-en.xml",
+    "sitemap-en.xml"
+  ];
+
+  for (const outputPath of artifacts) {
+    assert.equal((await stat(resolve(outputDir, outputPath))).isFile(), true);
+    assert.ok(manifest.files.includes(outputPath), `manifest omits ${outputPath}`);
+    assert.ok(!manifest.entrypoints.includes(outputPath), `entrypoints includes artifact ${outputPath}`);
+  }
+});

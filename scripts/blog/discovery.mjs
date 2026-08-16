@@ -1,0 +1,250 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import { dirname, resolve } from "node:path";
+
+import { blogRoute } from "./routes.mjs";
+
+const LOCALES = ["en", "he"];
+const localized = (record, locale) => record?.locales?.[locale] ?? null;
+
+function stripMarkup(value) {
+  return String(value ?? "")
+    .replace(/<[^>]*>/gu, " ")
+    .replace(/\s+/gu, " ")
+    .trim();
+}
+
+function textIn(value, key = "") {
+  if (typeof value === "string") return ["href", "src", "url", "id", "serviceId", "type"].includes(key) ? [] : [stripMarkup(value)];
+  if (Array.isArray(value)) return value.flatMap((entry) => textIn(entry));
+  if (value && typeof value === "object") return Object.entries(value).flatMap(([entryKey, entry]) => textIn(entry, entryKey));
+  return [];
+}
+
+function articlePath(article, locale) {
+  const content = localized(article, locale);
+  return content ? blogRoute({ locale, kind: "article", slug: content.slug }) : null;
+}
+
+function siteUrl(siteOrigin, outputPath) {
+  const origin = new URL(siteOrigin);
+  const base = origin.pathname === "/" ? origin.origin : `${origin.origin}${origin.pathname}`;
+  const path = outputPath === "index.html" ? "" : outputPath.replace(/index\.html$/u, "");
+  return `${base}/${path}`;
+}
+
+function xml(value) {
+  return String(value ?? "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&apos;");
+}
+
+function publicArticles(model, locale) {
+  return (model.publicArticles ?? [])
+    .filter((article) => localized(article, locale))
+    .sort((left, right) => right.publishedAt - left.publishedAt || left.id.localeCompare(right.id));
+}
+
+function articleKeywords(model, article, locale) {
+  const category = localized(model.byId.category.get(article.primaryCategory), locale)?.name;
+  const tags = article.tags.map((id) => localized(model.byId.tag.get(id), locale)?.name).filter(Boolean);
+  const authors = [article.primaryAuthor, ...(article.coAuthors ?? [])]
+    .map((id) => localized(model.byId.author.get(id), locale)?.name)
+    .filter(Boolean);
+  return { category, tags, authors };
+}
+
+/** Create the lightweight cross-site index for one locale. */
+export function createGlobalSearchIndex({ model, siteDocuments, locale }) {
+  const site = (Array.isArray(siteDocuments) ? siteDocuments : []).flatMap((document) => {
+    const content = localized(document, locale);
+    return content ? [{
+      id: document.id,
+      type: document.type,
+      locale,
+      title: stripMarkup(content.title),
+      summary: stripMarkup(content.summary),
+      href: content.href,
+      keywords: Array.isArray(document.keywords) ? document.keywords.map(stripMarkup) : [],
+      ...(Number.isFinite(document.groupOrder) ? { groupOrder: document.groupOrder } : {})
+    }] : [];
+  });
+  const articles = publicArticles(model, locale);
+  const authorIds = new Set(articles.flatMap((article) => [article.primaryAuthor, ...(article.coAuthors ?? [])]));
+  const authors = [...authorIds]
+    .map((id) => model.byId.author.get(id))
+    .filter((author) => localized(author, locale))
+    .sort((left, right) => localized(left, locale).name.localeCompare(localized(right, locale).name, locale) || left.id.localeCompare(right.id))
+    .map((author) => {
+      const content = localized(author, locale);
+      return {
+        id: author.id,
+        type: "author",
+        locale,
+        title: stripMarkup(content.name),
+        summary: stripMarkup(content.bio),
+        href: blogRoute({ locale, kind: "author", slug: content.slug }),
+        keywords: [...(author.expertise ?? []), stripMarkup(content.role)]
+      };
+    });
+  const articleDocuments = articles.map((article) => {
+    const content = localized(article, locale);
+    const metadata = articleKeywords(model, article, locale);
+    return {
+      id: article.id,
+      type: "article",
+      locale,
+      title: stripMarkup(content.title),
+      summary: stripMarkup(content.summary),
+      href: articlePath(article, locale),
+      keywords: [metadata.category, ...metadata.tags, ...metadata.authors].filter(Boolean).map(stripMarkup)
+    };
+  });
+  return [...site, ...authors, ...articleDocuments];
+}
+
+/** Create the full-text, filterable Blog index for one locale. */
+export function createBlogSearchIndex({ model, locale }) {
+  return publicArticles(model, locale).map((article) => {
+    const content = localized(article, locale);
+    const metadata = articleKeywords(model, article, locale);
+    return {
+      id: article.id,
+      type: "article",
+      locale,
+      title: stripMarkup(content.title),
+      summary: stripMarkup(content.summary),
+      href: articlePath(article, locale),
+      keywords: [metadata.category, ...metadata.tags, ...metadata.authors].filter(Boolean).map(stripMarkup),
+      content: textIn(content.blocks).filter(Boolean).join(" ").replace(/\s+/gu, " ").trim(),
+      category: article.primaryCategory,
+      tags: [...article.tags],
+      audiences: [...article.audiences],
+      level: article.level,
+      format: article.format,
+      authors: [article.primaryAuthor, ...(article.coAuthors ?? [])],
+      readingMinutes: article.readingMinutes[locale],
+      publishedAt: article.publishedAt.toISOString(),
+      editedAt: article.editedAt.toISOString()
+    };
+  });
+}
+
+/** Render a locale-specific RSS feed for all, category, or author articles. */
+export function renderRss({ model, locale, scope }) {
+  let articles = publicArticles(model, locale);
+  let title = localized(model.settings, locale).title;
+  if (scope.startsWith("category:")) {
+    const id = scope.slice("category:".length);
+    articles = articles.filter((article) => article.primaryCategory === id);
+    title = `${title} — ${localized(model.byId.category.get(id), locale)?.name ?? id}`;
+  } else if (scope.startsWith("author:")) {
+    const id = scope.slice("author:".length);
+    articles = articles.filter((article) => article.primaryAuthor === id || article.coAuthors?.includes(id));
+    title = `${title} — ${localized(model.byId.author.get(id), locale)?.name ?? id}`;
+  } else if (scope !== "all") {
+    throw new TypeError("scope must be all, category:<id>, or author:<id>");
+  }
+  const origin = model.settings.siteOrigin;
+  const channelUrl = siteUrl(origin, blogRoute({ locale, kind: "home" }));
+  const items = articles.map((article) => {
+    const content = localized(article, locale);
+    const url = siteUrl(origin, articlePath(article, locale));
+    return `<item><title>${xml(content.title)}</title><link>${xml(url)}</link><guid isPermaLink="true">${xml(url)}</guid><description>${xml(content.summary)}</description><pubDate>${xml(article.publishedAt.toUTCString())}</pubDate><lastBuildDate>${xml(article.editedAt.toUTCString())}</lastBuildDate></item>`;
+  }).join("");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<rss version="2.0"><channel><title>${xml(title)}</title><link>${xml(channelUrl)}</link><description>${xml(localized(model.settings, locale).summary)}</description>${items}</channel></rss>\n`;
+}
+
+/** Render an XML sitemap from absolute URL entries. */
+export function renderSitemap({ entries, siteOrigin }) {
+  new URL(siteOrigin);
+  const items = [...entries]
+    .sort((left, right) => left.loc.localeCompare(right.loc))
+    .map((entry) => `<url><loc>${xml(entry.loc)}</loc>${entry.lastmod ? `<lastmod>${xml(entry.lastmod)}</lastmod>` : ""}</url>`)
+    .join("");
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${items}</urlset>\n`;
+}
+
+/** Return Article JSON-LD for one localized public article. */
+export function articleStructuredData({ article, locale, canonicalUrl }) {
+  const content = localized(article, locale);
+  if (!content) throw new TypeError("article must be available in locale");
+  return {
+    "@context": "https://schema.org",
+    "@type": "Article",
+    headline: stripMarkup(content.title),
+    description: stripMarkup(content.summary),
+    url: canonicalUrl,
+    inLanguage: locale,
+    datePublished: article.publishedAt.toISOString(),
+    dateModified: article.editedAt.toISOString()
+  };
+}
+
+function sitemapEntries(model, siteDocuments, locale, siteOrigin) {
+  const entries = [];
+  const add = (outputPath, lastmod) => entries.push({ loc: siteUrl(siteOrigin, outputPath), ...(lastmod ? { lastmod } : {}) });
+  for (const document of Array.isArray(siteDocuments) ? siteDocuments : []) {
+    const content = localized(document, locale);
+    if (content?.href && !content.href.includes("#")) add(content.href);
+  }
+  add(blogRoute({ locale, kind: "home" }));
+  const articles = publicArticles(model, locale);
+  const articleIds = new Set(articles.map((article) => article.id));
+  for (const category of model.categories.filter((record) => localized(record, locale) && articles.some((article) => article.primaryCategory === record.id))) add(blogRoute({ locale, kind: "category", slug: localized(category, locale).slug }));
+  for (const tag of model.tags.filter((record) => localized(record, locale) && articles.some((article) => article.tags.includes(record.id)))) add(blogRoute({ locale, kind: "tag", slug: localized(tag, locale).slug }));
+  for (const series of model.series.filter((record) => localized(record, locale) && record.articleIds?.some((id) => articleIds.has(id)))) add(blogRoute({ locale, kind: "series", slug: localized(series, locale).slug }));
+  for (const author of model.authors.filter((record) => localized(record, locale) && articles.some((article) => article.primaryAuthor === record.id || article.coAuthors?.includes(record.id)))) add(blogRoute({ locale, kind: "author", slug: localized(author, locale).slug }));
+  for (const article of articles) add(articlePath(article, locale), article.editedAt.toISOString());
+  return entries;
+}
+
+function outputPathForRedirect(redirect, siteOrigin) {
+  const destination = new URL(redirect.oldPath, siteOrigin);
+  const base = new URL(siteOrigin).pathname.replace(/\/$/u, "");
+  if (!destination.pathname.startsWith(`${base}/`)) throw new TypeError("redirect oldPath must be inside the site base path");
+  const relative = destination.pathname.slice(base.length + 1).replace(/\/$/u, "");
+  if (!relative || relative.split("/").some((part) => !part || part === "." || part === "..")) throw new TypeError("redirect oldPath must identify a safe page");
+  return `${relative}/index.html`;
+}
+
+function renderRedirect({ redirect, siteOrigin }) {
+  const destination = new URL(redirect.replacementPath, siteOrigin).href;
+  const hebrew = redirect.locale === "he";
+  const title = hebrew ? "העמוד הועבר" : "Page moved";
+  const message = hebrew ? "העמוד הזה הועבר." : "This page has moved.";
+  const action = hebrew ? "המשך לעמוד הנוכחי" : "Continue to the current page";
+  return `<!doctype html><html lang="${xml(redirect.locale)}" dir="${hebrew ? "rtl" : "ltr"}"><head><meta charset="UTF-8"><meta name="robots" content="noindex, nofollow"><link rel="canonical" href="${xml(destination)}"><meta http-equiv="refresh" content="0; url=${xml(destination)}"><title>${xml(title)}</title></head><body><main><p>${xml(message)} <a href="${xml(destination)}">${xml(action)}</a>.</p></main></body></html>\n`;
+}
+
+async function emitFile(outputDir, outputPath, content, paths) {
+  await mkdir(dirname(resolve(outputDir, outputPath)), { recursive: true });
+  await writeFile(resolve(outputDir, outputPath), content);
+  paths.push(outputPath);
+}
+
+/** Emit deterministic locale-specific search, feed, sitemap, and redirect artifacts. */
+export async function emitDiscoveryArtifacts({ model, siteDocuments, outputDir, siteOrigin }) {
+  const paths = [];
+  for (const locale of LOCALES) {
+    await emitFile(outputDir, `search-index-${locale}.json`, `${JSON.stringify(createGlobalSearchIndex({ model, siteDocuments, locale }), null, 2)}\n`, paths);
+    const prefix = locale === "he" ? "he/blog" : "blog";
+    await emitFile(outputDir, `blog/search-index-${locale}.json`, `${JSON.stringify(createBlogSearchIndex({ model, locale }), null, 2)}\n`, paths);
+    await emitFile(outputDir, `${prefix}/rss-${locale}.xml`, renderRss({ model, locale, scope: "all" }), paths);
+    for (const category of model.categories.filter((record) => localized(record, locale))) {
+      await emitFile(outputDir, `${prefix}/category/${localized(category, locale).slug}/rss-${locale}.xml`, renderRss({ model, locale, scope: `category:${category.id}` }), paths);
+    }
+    for (const author of model.authors.filter((record) => localized(record, locale))) {
+      await emitFile(outputDir, `${prefix}/authors/${localized(author, locale).slug}/rss-${locale}.xml`, renderRss({ model, locale, scope: `author:${author.id}` }), paths);
+    }
+    await emitFile(outputDir, `sitemap-${locale}.xml`, renderSitemap({ entries: sitemapEntries(model, siteDocuments, locale, siteOrigin), siteOrigin }), paths);
+  }
+  for (const article of model.articles ?? []) {
+    if (!article.redirect) continue;
+    const outputPath = outputPathForRedirect(article.redirect, siteOrigin);
+    await emitFile(outputDir, outputPath, renderRedirect({ redirect: article.redirect, siteOrigin }), paths);
+  }
+  return paths.sort();
+}

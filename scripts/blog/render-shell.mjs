@@ -72,6 +72,15 @@ function siteUrl(siteOrigin, path) {
   return `${baseUrl}/${safeCanonicalPath(path, "canonical path")}`;
 }
 
+function assetUrl(siteOrigin, path) {
+  if (typeof path !== "string" || !/^assets\/(?:[A-Za-z0-9_.-]+\/)*[A-Za-z0-9_.-]+$/u.test(path)) {
+    throw new TypeError("socialImage must be a safe local asset path");
+  }
+  const origin = new URL(siteOrigin);
+  const base = `${origin.origin}${origin.pathname === "/" ? "" : origin.pathname}/`;
+  return new URL(path, base).href;
+}
+
 function linkTo(outputPath, targetOutputPath, fragment = "") {
   return `${relativeSitePath(outputPath, targetOutputPath)}${fragment}`;
 }
@@ -145,11 +154,19 @@ export function renderDocument({
   mainHtml,
   structuredData = [],
   scripts = [],
+  robots = "index, follow",
+  socialTitle = title,
+  socialDescription = description,
+  socialImage = null,
+  socialType = "website",
   siteOrigin = DEFAULT_SITE_ORIGIN
 }) {
   if (!(locale in copy)) throw new TypeError("locale must be en or he");
   if (typeof template !== "string" || typeof mainHtml !== "string") throw new TypeError("template and mainHtml must be strings");
   if (!Array.isArray(structuredData) || !Array.isArray(scripts)) throw new TypeError("structuredData and scripts must be arrays");
+  if (!/^(?:index|noindex), (?:follow|nofollow)$/u.test(robots)) throw new TypeError("robots must be an index/follow directive");
+  if (typeof socialTitle !== "string" || typeof socialDescription !== "string") throw new TypeError("social title and description must be strings");
+  if (typeof socialType !== "string" || !/^[a-z-]+$/u.test(socialType)) throw new TypeError("socialType must be a lowercase token");
 
   const canonicalUrl = siteUrl(siteOrigin, canonicalPath);
   const alternateUrl = alternatePath === null ? null : siteUrl(siteOrigin, alternatePath);
@@ -159,11 +176,17 @@ export function renderDocument({
   const head = `<meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="description" content="${escapeAttribute(description)}" />
+<meta name="robots" content="${escapeAttribute(robots)}" />
 <title>${escapeHtml(title)} — Positivus</title>
 <link rel="icon" href="${escapeAttribute(asset("assets/icons/star.svg"))}" type="image/svg+xml" />
 <link rel="canonical" href="${escapeAttribute(canonicalUrl)}" />
 ${alternateUrl ? `<link rel="alternate" hreflang="${otherLocale}" href="${escapeAttribute(alternateUrl)}" />` : ""}
 <link rel="alternate" hreflang="${locale}" href="${escapeAttribute(canonicalUrl)}" />
+<meta property="og:type" content="${escapeAttribute(socialType)}" />
+<meta property="og:url" content="${escapeAttribute(canonicalUrl)}" />
+<meta property="og:title" content="${escapeAttribute(socialTitle)}" />
+<meta property="og:description" content="${escapeAttribute(socialDescription)}" />
+${socialImage ? `<meta property="og:image" content="${escapeAttribute(assetUrl(siteOrigin, socialImage))}" />\n<meta name="twitter:card" content="summary_large_image" />\n<meta name="twitter:title" content="${escapeAttribute(socialTitle)}" />\n<meta name="twitter:description" content="${escapeAttribute(socialDescription)}" />\n<meta name="twitter:image" content="${escapeAttribute(assetUrl(siteOrigin, socialImage))}" />` : ""}
 <link rel="stylesheet" href="${escapeAttribute(asset("css/main.css"))}" />
 <link rel="stylesheet" href="${escapeAttribute(asset("css/blog.css"))}" />
 ${renderStructuredData(structuredData)}`;
