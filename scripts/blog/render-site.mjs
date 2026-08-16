@@ -11,6 +11,7 @@ import {
   renderCategoryPage,
   renderMissingTranslationPage,
   renderSeriesPage,
+  renderTagIndexPage,
   renderTagPage
 } from "./render-pages.mjs";
 
@@ -26,6 +27,7 @@ function emitPages(model, template, version) {
   for (const locale of LOCALES) {
     pages.push(renderBlogHome({ model, template, locale, version }));
     pages.push(renderBrowsePage({ model, template, locale }));
+    pages.push(renderTagIndexPage({ model, template, locale }));
     for (const category of model.categories.filter((record) => localized(record, locale))) pages.push(renderCategoryPage({ model, template, locale, category }));
     for (const tag of model.tags.filter((record) => localized(record, locale)).sort(byLocalizedName(locale))) pages.push(renderTagPage({ model, template, locale, tag }));
     for (const series of model.series.filter((record) => localized(record, locale)).sort((left, right) => left.id.localeCompare(right.id))) pages.push(renderSeriesPage({ model, template, locale, series }));

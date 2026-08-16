@@ -7,7 +7,9 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 
 import { repositoryRoot } from "../scripts/build.mjs";
+import { loadLocalBlogSource } from "../scripts/blog/local-json-adapter.mjs";
 import { renderBlogSite } from "../scripts/blog/render-site.mjs";
+import { createBlogModel } from "../scripts/blog/schema.mjs";
 import { loadRepositoryBlogModel } from "./helpers/blog-fixture.mjs";
 
 const resolveAsset = (path) => `../../${path}`;
@@ -254,5 +256,86 @@ test("browse starts with twelve stable cards and accessible numbered pagination"
   assert.match(html, /data-blog-sort/);
   assert.match(html, /data-result-count/);
   assert.match(html, /data-pagination/);
+  assert.match(html, /data-tag-cloud/);
   assert.match(html, /aria-current="page"/);
+});
+
+test("article TOC targets only rendered headed blocks when an unheaded block comes first", async () => {
+  const sourceDir = resolve(repositoryRoot, "sources");
+  const raw = await loadLocalBlogSource({ sourceDir });
+  raw.articles.find((article) => article.id === "marketing-dashboard").locales.en.blocks.unshift({ type: "callout", tone: "expert", body: "Read this note first." });
+  const model = createBlogModel(raw, { now: new Date("2026-08-15T00:00:00.000Z") });
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-toc-"));
+  await renderBlogSite({ model, sourceDir, outputDir, version: "1.2.0" });
+
+  const html = await readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8");
+  assert.match(html, /<section class="article-block article-block--callout callout--expert"><p><strong>Expert:<\/strong> Read this note first\.<\/p><\/section>/);
+  assert.match(html, /<a href="#section-1">Key takeaways<\/a>/);
+  assert.match(html, /<section class="article-block article-block--key-takeaways" id="section-1">/);
+  assert.doesNotMatch(html, /article-block--callout" id="section-1"/);
+});
+
+test("category and tag archives expose their required editorial discovery paths", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-archives-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const [category, tag] = await Promise.all([
+    readFile(resolve(outputDir, "blog/category/seo/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/tag/technical-seo/index.html"), "utf8")
+  ]);
+  assert.match(category, /data-category-featured/);
+  assert.match(category, /data-category-facets/);
+  assert.match(category, /data-category-remaining/);
+  assert.match(tag, /data-tag-index-link/);
+  assert.match(tag, /data-tag-categories/);
+  assert.match(tag, /category\/seo\/index\.html/);
+});
+
+test("emits alphabetical locale-specific tag indexes with published counts", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-tag-index-"));
+  const pages = await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  assert.ok(pages.includes("blog/tags/index.html"));
+  assert.ok(pages.includes("he/blog/tags/index.html"));
+  const [english, hebrew] = await Promise.all([
+    readFile(resolve(outputDir, "blog/tags/index.html"), "utf8"),
+    readFile(resolve(outputDir, "he/blog/tags/index.html"), "utf8")
+  ]);
+  assert.match(english, /data-tag-index/);
+  assert.ok(english.indexOf("B2B") < english.indexOf("Brand voice"));
+  assert.match(english, /Technical SEO <span>\(2\)<\/span>/);
+  assert.match(hebrew, /data-tag-index/);
+  assert.match(hebrew, /SEO טכני <span>\(2\)<\/span>/);
+});
+
+test("author profiles derive article, guide, and series counts from published localized work", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-author-counts-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const html = await readFile(resolve(outputDir, "blog/authors/maya-chen/index.html"), "utf8");
+  assert.match(html, /data-author-counts/);
+  assert.match(html, /Articles<\/dt><dd>2<\/dd>/);
+  assert.match(html, /Guides<\/dt><dd>1<\/dd>/);
+  assert.match(html, /Series<\/dt><dd>1<\/dd>/);
+});
+
+test("renders localized names and hero alternatives with one layer of attribute escaping", async () => {
+  const model = await loadRepositoryBlogModel();
+  const modified = structuredClone(model);
+  modified.byId.author.get("maya-chen").locales.en.name = "A & B";
+  modified.byId.article.get("marketing-dashboard").hero.alt.en = "A & B";
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-attribute-"));
+  await renderBlogSite({ model: modified, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const [author, article] = await Promise.all([
+    readFile(resolve(outputDir, "blog/authors/maya-chen/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8")
+  ]);
+  assert.match(author, /alt="A &amp; B"/);
+  assert.match(article, /alt="A &amp; B"/);
+  assert.doesNotMatch(author, /A &amp;amp; B/);
+  assert.doesNotMatch(article, /A &amp;amp; B/);
 });

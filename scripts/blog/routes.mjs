@@ -4,6 +4,7 @@ const LOCALES = new Set(["en", "he"]);
 const KINDS = new Set([
   "home",
   "browse",
+  "tags",
   "category",
   "tag",
   "series",
@@ -32,6 +33,7 @@ export function blogRoute({ locale, kind, slug = "" }) {
   const patterns = {
     home: `${prefix}/index.html`,
     browse: `${prefix}/search/index.html`,
+    tags: `${prefix}/tags/index.html`,
     category: `${prefix}/category/${slug}/index.html`,
     tag: `${prefix}/tag/${slug}/index.html`,
     series: `${prefix}/series/${slug}/index.html`,
