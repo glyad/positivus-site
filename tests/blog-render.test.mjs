@@ -48,7 +48,7 @@ test("renders the first structured article blocks with semantic HTML and escaped
   assert.match(html, /<blockquote><p>Use &lt; evidence<\/p><footer>Maya &amp; Co\.<\/footer><\/blockquote>/);
   assert.match(html, /<data value="1 &lt; 2">1 &lt; 2<\/data>/);
   assert.match(html, /Measure &lt; outcomes/);
-  assert.doesNotMatch(html, /<script>/);
+  assert.doesNotMatch(html, /<script>/iu);
   assert.doesNotMatch(html, /Never trust <script>/);
 });
 
