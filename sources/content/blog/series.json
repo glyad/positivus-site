@@ -1,0 +1,4 @@
+[
+  {"id":"growth-foundations","articleIds":["positioning-before-channels","sustainable-demand-system","content-briefs"],"audiences":["leaders","practitioners"],"level":"beginner","locales":{"en":{"title":"Growth foundations","slug":"growth-foundations","description":"A practical path from market clarity to repeatable demand."},"he":{"title":"יסודות הצמיחה","slug":"yesodot-hatzmicha","description":"מסלול מעשי מבהירות שוק לביקוש שאפשר לחזור עליו."}}},
+  {"id":"measurement-that-matters","articleIds":["marketing-dashboard","social-metrics","analytics-attribution-models"],"audiences":["leaders","specialists"],"level":"intermediate","locales":{"en":{"title":"Measurement that matters","slug":"measurement-that-matters","description":"Choose evidence that improves the next conversation and decision."},"he":{"title":"מדידה שחשובה באמת","slug":"medida-shechashuva","description":"בחרו ראיות שמשפרות את השיחה ואת ההחלטה הבאה."}}}
+]

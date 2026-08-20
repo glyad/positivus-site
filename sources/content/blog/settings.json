@@ -1,0 +1,18 @@
+{
+  "id": "blog",
+  "siteOrigin": "https://glyad.github.io/positivus-site",
+  "basePath": "/positivus-site/",
+  "featuredArticle": "sustainable-demand-system",
+  "locales": {
+    "en": {
+      "title": "Knowledge Hub",
+      "summary": "Practical marketing systems for teams that want clearer decisions and steadier growth.",
+      "newsletterTitle": "Keep useful marketing close"
+    },
+    "he": {
+      "title": "מרכז הידע",
+      "summary": "מערכות שיווק מעשיות לצוותים שרוצים החלטות ברורות וצמיחה יציבה.",
+      "newsletterTitle": "להישאר קרובים לשיווק שימושי"
+    }
+  }
+}

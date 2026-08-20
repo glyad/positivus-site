@@ -8,7 +8,9 @@ import {
   normalizeVerificationCode,
   passwordIssue,
   providerFromSearch,
-  providerStateFromSearch
+  providerStateFromSearch,
+  safeReturnPath,
+  withSafeReturnPath
 } from "../sources/js/auth-core.mjs";
 
 test("email validation accepts normal addresses and rejects malformed input", () => {
@@ -47,4 +49,23 @@ test("social provider and state parameters use safe allowlists", () => {
 test("countdowns are localized and never become negative", () => {
   assert.equal(formatCountdown(45, "en"), "Resend available in 00:45");
   assert.equal(formatCountdown(-1, "he"), "אפשר לשלוח שוב בעוד 00:00");
+});
+
+test("allows only local blog article return paths", () => {
+  assert.equal(safeReturnPath("blog/seo-audit/index.html?commenter=demo#comments"), "blog/seo-audit/index.html?commenter=demo#comments");
+  assert.equal(safeReturnPath("he/blog/audit-seo/index.html?commenter=demo#comments"), "he/blog/audit-seo/index.html?commenter=demo#comments");
+  assert.equal(safeReturnPath("https://example.com"), "");
+  assert.equal(safeReturnPath("javascript:alert(1)"), "");
+  assert.equal(safeReturnPath("blog/seo-audit/index.html?commenter=other#comments"), "");
+});
+
+test("keeps a validated comment return through social retry and email fallback paths", () => {
+  const article = "blog/seo-audit/index.html?commenter=demo#comments";
+  const retry = withSafeReturnPath("social-auth.html?provider=google", article);
+  const email = withSafeReturnPath("sign-in.html", article);
+  assert.equal(retry, "social-auth.html?provider=google&return=blog%2Fseo-audit%2Findex.html%3Fcommenter%3Ddemo%23comments");
+  assert.equal(email, "sign-in.html?return=blog%2Fseo-audit%2Findex.html%3Fcommenter%3Ddemo%23comments");
+  assert.equal(withSafeReturnPath("account.html", new URLSearchParams(retry.split("?", 2)[1]).get("return")), "account.html?return=blog%2Fseo-audit%2Findex.html%3Fcommenter%3Ddemo%23comments");
+  assert.equal(withSafeReturnPath("account.html", new URLSearchParams(email.split("?", 2)[1]).get("return")), "account.html?return=blog%2Fseo-audit%2Findex.html%3Fcommenter%3Ddemo%23comments");
+  assert.equal(withSafeReturnPath("sign-in.html", "https://example.com"), "sign-in.html");
 });

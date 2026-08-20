@@ -2,7 +2,9 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, extname, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-import { repositoryRoot } from "./build.mjs";
+import { buildSite, repositoryRoot } from "./build.mjs";
+import { validateGeneratedSite } from "./generated-site-guards.mjs";
+import { formatContentValidationError, validateRepositoryBlogContent } from "./validate-content.mjs";
 import { authNavigation, authPages, authText } from "../sources/js/auth-content.mjs";
 
 const failures = [];
@@ -42,6 +44,7 @@ for (const filePath of [
 const htmlPath = resolve(sourceDir, "index.html");
 const html = await readFile(htmlPath, "utf8");
 const authFilenames = new Set(authPages.map((page) => page.filename));
+const generatedFilenames = new Set(["blog/index.html", "search/index.html", "he/search/index.html"]);
 const references = [...html.matchAll(/(?:href|src)="([^"]+)"/g)].map(
   (match) => match[1]
 );
@@ -56,6 +59,7 @@ for (const reference of references) {
 
   const cleanReference = reference.split(/[?#]/, 1)[0];
   if (authFilenames.has(cleanReference)) continue;
+  if (generatedFilenames.has(cleanReference)) continue;
   const expectedPath =
     cleanReference === "css/main.css"
       ? resolve(sourceDir, "scss", "main.scss")
@@ -233,6 +237,20 @@ for (const requiredFile of [
   } catch {
     failures.push(`repository: missing ${requiredFile}`);
   }
+}
+
+try {
+  await validateRepositoryBlogContent({ sourceDir });
+} catch (error) {
+  failures.push(formatContentValidationError(error));
+}
+
+try {
+  const outputDir = await buildSite();
+  const manifest = JSON.parse(await readFile(resolve(outputDir, "manifest.json"), "utf8"));
+  failures.push(...await validateGeneratedSite({ outputDir, entrypoints: manifest.entrypoints }));
+} catch (error) {
+  failures.push(`generated site: ${error.message}`);
 }
 
 if (failures.length) {
