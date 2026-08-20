@@ -4,6 +4,8 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-20
+
 ### Added
 
 - CMS-neutral bilingual Blog/Knowledge Hub with build-time schema validation, localized English LTR and Hebrew RTL routes, and explicit content-recovery states.
