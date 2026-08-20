@@ -85,6 +85,7 @@ const copy = {
   useEmailInstead: ["Use email instead", "שימוש באימייל במקום"],
   demoAccountTitle: ["Welcome to your demo account", "ברוכים הבאים לחשבון ההדגמה"],
   demoAccountBody: ["This is the end of the UI-only authentication journey. Explore the Positivus website or sign out to replay the flow.", "זהו סוף מסע ההתחברות בממשק ההדגמה. אפשר לעבור לאתר Positivus או להתנתק ולהתחיל מחדש."],
+  returnToArticle: ["Return to article", "חזרה למאמר"],
   exploreWebsite: ["Explore website", "מעבר לאתר"],
   signOut: ["Sign out", "התנתקות"],
   legalPrototype: ["Prototype copy — legal review required", "תוכן להדגמה — נדרשת בדיקה משפטית"],
@@ -160,6 +161,8 @@ const field = ({
         placeholder="${authText[placeholderKey].en}"
         autocomplete="${autocomplete}"
         aria-describedby="${describedBy}"
+        disabled
+        data-prototype-control
         ${required ? "required" : ""}
         ${inputmode ? `inputmode="${inputmode}"` : ""}
         ${maxlength ? `maxlength="${maxlength}"` : ""}
@@ -171,7 +174,7 @@ const field = ({
   </div>`;
 };
 
-const submitButton = (key) => `<button class="auth-submit" type="submit" data-submit>
+const submitButton = (key) => `<button class="auth-submit" type="submit" data-submit disabled data-prototype-control>
   <span data-submit-label>${text(key)}</span>
   ${icon("arrow-repeat", "auth-submit__spinner")}
 </button>`;
@@ -179,13 +182,13 @@ const submitButton = (key) => `<button class="auth-submit" type="submit" data-su
 const divider = () => `<div class="auth-divider"><span>${text("orContinueWith")}</span></div>`;
 
 const socialButtons = () => `<div class="auth-social" role="group" aria-label="Social sign-in" data-i18n-aria-label="socialSignIn">
-  <a class="auth-social__button" href="social-auth.html?provider=google">
+  <a class="auth-social__button" href="social-auth.html?provider=google" data-auth-social-flow-link>
     <img src="assets/icons/auth/google.svg" alt="" width="20" height="20" />${text("continueGoogle")}
   </a>
-  <a class="auth-social__button" href="social-auth.html?provider=apple">
+  <a class="auth-social__button" href="social-auth.html?provider=apple" data-auth-social-flow-link>
     <img src="assets/icons/auth/apple.svg" alt="" width="20" height="20" />${text("continueApple")}
   </a>
-  <a class="auth-social__button" href="social-auth.html?provider=facebook">
+  <a class="auth-social__button" href="social-auth.html?provider=facebook" data-auth-social-flow-link>
     <img src="assets/icons/auth/facebook.svg" alt="" width="20" height="20" />${text("continueFacebook")}
   </a>
 </div>`;
@@ -207,11 +210,11 @@ const stateArt = (iconName, tone = "green") => `<div class="auth-state-art auth-
 const signIn = authCard({
   titleKey: "welcomeBack",
   introKey: "signInIntro",
-  body: `<form class="auth-form" novalidate data-auth-form="sign-in">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="sign-in" data-prototype-form>
     ${field({ id: "email", labelKey: "email", type: "email", placeholderKey: "emailPlaceholder", autocomplete: "email", iconName: "envelope", inputmode: "email" })}
     ${field({ id: "password", labelKey: "password", type: "password", placeholderKey: "passwordPlaceholder", autocomplete: "current-password", iconName: "lock" })}
     <div class="auth-form__meta">
-      <label class="auth-checkbox"><input type="checkbox" name="remember" /><span>${text("rememberMe")}</span></label>
+      <label class="auth-checkbox"><input type="checkbox" name="remember" disabled data-prototype-control /><span>${text("rememberMe")}</span></label>
       <a href="forgot-password.html">${text("forgotPassword")}</a>
     </div>
     ${formStatus()}
@@ -232,7 +235,7 @@ const signUp = authCard({
   titleKey: "createTitle",
   introKey: "createIntro",
   modifier: "auth-card--wide",
-  body: `<form class="auth-form" novalidate data-auth-form="sign-up">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="sign-up" data-prototype-form>
     ${field({ id: "fullName", labelKey: "fullName", placeholderKey: "fullNamePlaceholder", autocomplete: "name", iconName: "person" })}
     ${field({ id: "email", labelKey: "email", type: "email", placeholderKey: "emailPlaceholder", autocomplete: "email", iconName: "envelope", inputmode: "email" })}
     ${field({ id: "password", labelKey: "password", type: "password", placeholderKey: "passwordPlaceholder", autocomplete: "new-password", iconName: "lock", minlength: 15 })}
@@ -240,7 +243,7 @@ const signUp = authCard({
     ${passwordGuidance()}
     <div class="auth-field auth-field--consent" data-field="consent">
       <label class="auth-checkbox auth-checkbox--consent">
-        <input type="checkbox" name="consent" required aria-describedby="consent-error" />
+        <input type="checkbox" name="consent" required aria-describedby="consent-error" disabled data-prototype-control />
         <span class="auth-consent-copy auth-consent-copy--en">${text("agreePrefix")} <a href="terms.html">${text("terms")}</a> ${text("and")} <a href="privacy.html">${text("privacyPolicy")}</a></span>
         <span class="auth-consent-copy auth-consent-copy--he" lang="he">אני מסכים/ה ל<a href="terms.html">תנאים</a> ו<a href="privacy.html">למדיניות הפרטיות</a></span>
       </label>
@@ -257,7 +260,7 @@ const signUp = authCard({
 const forgotPassword = authCard({
   titleKey: "forgotTitle",
   introKey: "forgotIntro",
-  body: `<form class="auth-form" novalidate data-auth-form="forgot-password">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="forgot-password" data-prototype-form>
     ${field({ id: "email", labelKey: "email", type: "email", placeholderKey: "emailPlaceholder", autocomplete: "email", iconName: "envelope", inputmode: "email" })}
     ${formStatus()}
     ${submitButton("sendResetLink")}
@@ -285,7 +288,7 @@ const checkEmail = authCard({
 const verifyEmail = authCard({
   titleKey: "verifyTitle",
   introKey: "verifyIntro",
-  body: `<form class="auth-form" novalidate data-auth-form="verify-email">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="verify-email" data-prototype-form>
     <div class="auth-field auth-field--otp" data-field="verificationCode">
       <label class="auth-field__label" for="verificationCode">${text("verificationCode")}</label>
       <div class="auth-otp" data-otp-shell>
@@ -301,6 +304,8 @@ const verifyEmail = authCard({
           aria-describedby="verificationCode-error"
           required
           data-otp-input
+          disabled
+          data-prototype-control
         />
         <div class="auth-otp__cells" aria-hidden="true">
           <span></span><span></span><span></span><span></span><span></span><span></span>
@@ -322,7 +327,7 @@ const verifyEmail = authCard({
 const resetPassword = authCard({
   titleKey: "resetTitle",
   introKey: "resetIntro",
-  body: `<form class="auth-form" novalidate data-auth-form="reset-password">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="reset-password" data-prototype-form>
     ${field({ id: "password", labelKey: "newPassword", type: "password", placeholderKey: "passwordPlaceholder", autocomplete: "new-password", iconName: "lock", minlength: 15 })}
     ${field({ id: "confirmPassword", labelKey: "confirmPassword", type: "password", placeholderKey: "confirmPasswordPlaceholder", autocomplete: "new-password", iconName: "lock", minlength: 15 })}
     ${passwordGuidance()}
@@ -369,20 +374,20 @@ const socialAuth = authCard({
     </div>
     <p class="auth-state-copy__lead" data-i18n="connectingProviderBody">${authText.connectingProviderBody.en}</p>
     <div class="auth-provider__actions" data-provider-actions hidden>
-      <a class="auth-submit" href="account.html">${text("continueDemo")}</a>
-      <a class="auth-back-link" href="sign-in.html">${text("cancel")}</a>
+      <a class="auth-submit" href="account.html" data-auth-social-flow-link>${text("continueDemo")}</a>
+      <a class="auth-back-link" href="sign-in.html" data-auth-social-flow-link>${text("cancel")}</a>
     </div>
   </div>
   <div class="auth-provider" data-provider-error hidden>
     ${stateArt("cloud-slash")}
     <p data-provider-error-body data-i18n="providerUnavailableBody">${authText.providerUnavailableBody.en}</p>
-    <a class="auth-submit" href="social-auth.html?provider=google">${text("tryAgain")}</a>
-    <a class="auth-back-link" href="sign-in.html">${text("useEmailInstead")}</a>
+    <a class="auth-submit" href="social-auth.html?provider=google" data-auth-social-flow-link>${text("tryAgain")}</a>
+    <a class="auth-back-link" href="sign-in.html" data-auth-social-flow-link>${text("useEmailInstead")}</a>
   </div>
   <details class="auth-demo-states">
     <summary>${text("demoStateLinks")}</summary>
-    <a href="social-auth.html?provider=google&amp;state=error">${text("previewProviderError")}</a>
-    <a href="social-auth.html?provider=google&amp;state=cancelled">${text("previewProviderCancelled")}</a>
+    <a href="social-auth.html?provider=google&amp;state=error" data-auth-social-flow-link>${text("previewProviderError")}</a>
+    <a href="social-auth.html?provider=google&amp;state=cancelled" data-auth-social-flow-link>${text("previewProviderCancelled")}</a>
   </details>`,
   modifier: "auth-card--state"
 });
@@ -392,6 +397,7 @@ const account = authCard({
   body: `${stateArt("shield-check")}
     <p class="auth-state-copy__lead">${text("demoAccountBody")}</p>
     <div class="auth-button-row">
+      <a class="auth-submit" data-return-to-article hidden>${text("returnToArticle")}</a>
       <a class="auth-submit" href="index.html">${icon("home")}${text("exploreWebsite")}</a>
       <a class="auth-secondary" href="sign-in.html">${icon("sign-out")}${text("signOut")}</a>
     </div>`,

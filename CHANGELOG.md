@@ -4,6 +4,20 @@ All notable changes to this project are documented in this file. The format foll
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-08-20
+
+### Added
+
+- CMS-neutral bilingual Blog/Knowledge Hub with build-time schema validation, localized English LTR and Hebrew RTL routes, and explicit content-recovery states.
+- Multi-author directory and profiles, category and tag archives, weighted tag cloud, ordered series, article pagination, and related-reading navigation.
+- Separate global and Blog search indexes, locale-aware RSS/category/author feeds, sitemaps, redirects, canonical/alternate metadata, and structured article data.
+- Responsive, keyboard-aware Blog navigation, filters, table of contents, search dialog, newsletter and consultation prototypes, and a UI-only in-memory comment demonstration.
+- Fresh Blog visual-QA evidence for bilingual desktop/compact layouts, core route families, recovery states, and signed-out/signed-in/invalid/success/session-reset comment states.
+
+### Changed
+
+- Added the Blog destination to the shared landing navigation and introduced the shared search header across generated Blog pages.
+
 ## [1.1.0] - 2026-08-14
 
 ### Added

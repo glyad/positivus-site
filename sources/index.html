@@ -10,7 +10,8 @@
     <title>Positivus — Digital Marketing Agency</title>
     <link rel="icon" href="assets/icons/star.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="css/main.css" />
-    <script src="js/main.js" defer></script>
+    <script type="module" src="js/main.js"></script>
+    <script type="module" src="js/site-search.js"></script>
   </head>
   <body>
     <a class="skip-link" href="#main-content">Skip to content</a>
@@ -39,8 +40,9 @@
             <li><a href="#services">Services</a></li>
             <li><a href="#use-cases">Use Cases</a></li>
             <li><a href="#pricing">Pricing</a></li>
-            <li><a href="#blog">Blog</a></li>
+            <li><a href="blog/index.html" data-blog-link>Blog</a></li>
           </ul>
+          <a class="site-search-trigger" href="search/index.html" data-site-search-open aria-label="Search Positivus">Search Positivus</a>
           <a class="button button--outline site-nav__cta" href="#contact">Request a quote</a>
           <div class="site-nav__account">
             <button
@@ -57,6 +59,34 @@
         </nav>
       </div>
       <button class="nav-backdrop" type="button" aria-label="Dismiss navigation overlay" data-nav-backdrop></button>
+      <dialog
+        data-site-search-dialog
+        data-site-search-index="search-index-en.json"
+        data-site-search-index-en="search-index-en.json"
+        data-site-search-index-he="search-index-he.json"
+        data-site-search-fallback-en="search/index.html"
+        data-site-search-fallback-he="he/search/index.html"
+        data-site-search-topics="blog/tags/index.html"
+        data-site-search-topics-en="blog/tags/index.html"
+        data-site-search-topics-he="he/blog/tags/index.html"
+        data-site-search-services="index.html#services"
+        data-site-search-services-en="index.html#services"
+        data-site-search-services-he="index.html#services"
+        data-site-search-blog="blog/index.html"
+        data-site-search-blog-en="blog/index.html"
+        data-site-search-blog-he="he/blog/index.html"
+        aria-labelledby="site-search-title"
+      >
+        <form method="dialog"><button type="submit" aria-label="Close search">×</button></form>
+        <h2 id="site-search-title">Search Positivus</h2>
+        <form action="search/index.html" method="get" role="search">
+          <label for="site-search-input">Search the Positivus site</label>
+          <input id="site-search-input" name="q" type="search" data-site-search-input />
+          <button type="submit">Search Positivus</button>
+        </form>
+        <div data-site-search-status aria-live="polite"></div>
+        <div data-site-search-results></div>
+      </dialog>
     </header>
 
     <main id="main-content">
@@ -575,16 +605,17 @@
         </header>
 
         <div class="contact-panel">
-          <form class="contact-form" novalidate data-contact-form>
+          <form class="contact-form" action="#prototype-only" method="get" novalidate data-contact-form data-prototype-form>
+            <noscript><p>This UI-only prototype needs JavaScript. Personal controls remain disabled and values are not sent. / אב־טיפוס זה דורש JavaScript. השדות האישיים נשארים מושבתים והערכים אינם נשלחים.</p></noscript>
             <fieldset class="contact-form__choices">
               <legend class="sr-only">Reason for contacting us</legend>
               <label class="radio-control">
-                <input type="radio" name="contactType" value="say-hi" checked />
+                <input type="radio" name="contactType" value="say-hi" checked disabled data-prototype-control />
                 <span class="radio-control__indicator" aria-hidden="true"></span>
                 <span>Say Hi</span>
               </label>
               <label class="radio-control">
-                <input type="radio" name="contactType" value="quote" />
+                <input type="radio" name="contactType" value="quote" disabled data-prototype-control />
                 <span class="radio-control__indicator" aria-hidden="true"></span>
                 <span>Get a Quote</span>
               </label>
@@ -592,23 +623,23 @@
 
             <div class="field">
               <label for="name">Name</label>
-              <input id="name" name="name" type="text" autocomplete="name" placeholder="Name" />
+              <input id="name" name="name" type="text" autocomplete="name" placeholder="Name" disabled data-prototype-control />
               <span class="field__error" data-error-for="name"></span>
             </div>
 
             <div class="field">
               <label for="email">Email*</label>
-              <input id="email" name="email" type="email" autocomplete="email" placeholder="Email" required />
+              <input id="email" name="email" type="email" autocomplete="email" placeholder="Email" required disabled data-prototype-control />
               <span class="field__error" data-error-for="email"></span>
             </div>
 
             <div class="field">
               <label for="message">Message*</label>
-              <textarea id="message" name="message" placeholder="Message" required></textarea>
+              <textarea id="message" name="message" placeholder="Message" required disabled data-prototype-control></textarea>
               <span class="field__error" data-error-for="message"></span>
             </div>
 
-            <button class="button button--dark contact-form__submit" type="submit">Send Message</button>
+            <button class="button button--dark contact-form__submit" type="submit" disabled data-prototype-control>Send Message</button>
             <p class="form-status" role="status" aria-live="polite" data-form-status></p>
           </form>
 
@@ -635,7 +666,7 @@
               <li><a href="#services">Services</a></li>
               <li><a href="#use-cases">Use Cases</a></li>
               <li><a href="#pricing">Pricing</a></li>
-              <li><a href="#blog">Blog</a></li>
+              <li><a href="blog/index.html" data-blog-link>Blog</a></li>
             </ul>
           </nav>
           <div class="social-list" aria-label="Social media">
@@ -655,10 +686,11 @@
             </address>
           </section>
 
-          <form class="newsletter" data-newsletter-form>
+          <form class="newsletter" action="#prototype-only" method="get" data-newsletter-form data-prototype-form>
+            <noscript><p>This UI-only prototype needs JavaScript. Personal controls remain disabled and values are not sent. / אב־טיפוס זה דורש JavaScript. השדות האישיים נשארים מושבתים והערכים אינם נשלחים.</p></noscript>
             <label class="sr-only" for="newsletter-email">Email address</label>
-            <input id="newsletter-email" name="email" type="email" placeholder="Email" required />
-            <button class="button button--green" type="submit">Subscribe to news</button>
+            <input id="newsletter-email" name="email" type="email" placeholder="Email" required disabled data-prototype-control />
+            <button class="button button--green" type="submit" disabled data-prototype-control>Subscribe to news</button>
             <p class="newsletter__status" role="status" aria-live="polite" data-newsletter-status></p>
           </form>
         </div>

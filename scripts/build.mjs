@@ -3,11 +3,38 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { authNavigation, authPages, authText } from "../sources/js/auth-content.mjs";
+import { emitDiscoveryArtifacts } from "./blog/discovery.mjs";
+import { loadLocalBlogSource } from "./blog/local-json-adapter.mjs";
+import { discoveryEntrypoints, renderBlogSite } from "./blog/render-site.mjs";
+import { createBlogModel } from "./blog/schema.mjs";
 
 const scriptPath = fileURLToPath(import.meta.url);
 export const repositoryRoot = resolve(dirname(scriptPath), "..");
 
-export async function buildSite({ rootDir = repositoryRoot } = {}) {
+function siteOriginFromOverride(value, basePath) {
+  let origin;
+  try {
+    const url = new URL(value);
+    if (
+      typeof value !== "string" ||
+      value !== url.origin ||
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    ) {
+      throw new TypeError();
+    }
+    origin = url.origin;
+  } catch {
+    throw new TypeError("POSITIVUS_SITE_ORIGIN must be a canonical HTTPS origin without credentials, path, query, or fragment");
+  }
+  return `${origin}${basePath === "/" ? "" : basePath.slice(0, -1)}`;
+}
+
+export async function buildSite({ rootDir = repositoryRoot, env = process.env } = {}) {
   const sourceDir = resolve(rootDir, "sources");
   const outputDir = resolve(rootDir, "dist");
   const packageMetadata = JSON.parse(
@@ -16,6 +43,17 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
   const authTemplate = await readFile(
     resolve(sourceDir, "auth-template.html"),
     "utf8"
+  );
+  const blogSource = await loadLocalBlogSource({ sourceDir });
+  if (env.POSITIVUS_SITE_ORIGIN !== undefined) {
+    blogSource.settings.siteOrigin = siteOriginFromOverride(
+      env.POSITIVUS_SITE_ORIGIN,
+      blogSource.settings.basePath
+    );
+  }
+  const blogModel = createBlogModel(blogSource, { now: new Date() });
+  const siteDocuments = JSON.parse(
+    await readFile(resolve(sourceDir, "content", "site-search.json"), "utf8")
   );
 
   await rm(outputDir, { force: true, recursive: true });
@@ -50,12 +88,36 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
     resolve(outputDir, "css", "main.css"),
     `/* Generated from sources/scss/main.scss. */\n${stylesheet}`
   );
+  const blogStylesheet = await readFile(
+    resolve(sourceDir, "scss", "blog.scss"),
+    "utf8"
+  );
+  await writeFile(
+    resolve(outputDir, "css", "blog.css"),
+    `/* Generated from sources/scss/blog.scss. */\n${blogStylesheet}`
+  );
+
+  const blogEntrypoints = await renderBlogSite({
+    model: blogModel,
+    sourceDir,
+    outputDir,
+    version: packageMetadata.version,
+  });
+  const discoveryArtifacts = await emitDiscoveryArtifacts({
+    model: blogModel,
+    siteDocuments,
+    outputDir,
+    siteOrigin: blogModel.settings.siteOrigin,
+    publicRoutePaths: ["index.html", ...authPages.map((page) => page.filename), ...blogEntrypoints],
+  });
+  const generatedEntrypoints = discoveryEntrypoints(discoveryArtifacts);
 
   const manifest = {
     name: packageMetadata.name,
     version: packageMetadata.version,
     entrypoint: "index.html",
-    entrypoints: ["index.html", ...authPages.map((page) => page.filename)],
+    entrypoints: ["index.html", ...authPages.map((page) => page.filename), ...blogEntrypoints, ...generatedEntrypoints],
+    files: [...blogEntrypoints, ...discoveryArtifacts],
     source: "sources",
   };
 

@@ -1,0 +1,22 @@
+{
+  "id": "sustainable-demand-system",
+  "status": "published",
+  "primaryCategory": "strategy-growth",
+  "tags": ["demand-generation", "positioning", "b2b"],
+  "audiences": ["leaders", "practitioners"],
+  "level": "intermediate",
+  "format": "framework",
+  "primaryAuthor": "maya-chen",
+  "series": "growth-foundations",
+  "seriesOrder": 2,
+  "featured": true,
+  "relatedService": "strategy",
+  "publishedAt": "2026-05-07T09:00:00.000Z",
+  "editedAt": "2026-05-07T09:00:00.000Z",
+  "hero": {"src":"assets/images/decor/hero-illustration.svg","alt":{"en":"A person planning a campaign on a laptop","he":"אדם מתכנן קמפיין במחשב נייד"}},
+  "citations": [],
+  "locales": {
+    "en": {"slug":"sustainable-demand-system","title":"Build a sustainable demand system","summary":"Replace one-off campaigns with a connected way to create, capture, and learn from demand.","blocks":[{"type":"keyTakeaways","heading":"Key takeaways","items":["Demand compounds when teams share a market story and a learning rhythm.","Balance creation, capture, and conversion work instead of funding only the loudest channel."]},{"type":"richText","heading":"Start with the buying motion","paragraphs":["A demand system begins with the moment a buyer notices a costly problem. Map that motion before assigning channel targets.","Interview sales and customer teams for the phrases people use when they are ready to change."]},{"type":"richText","heading":"Create a weekly learning loop","paragraphs":["Choose one signal that shows attention, one that shows intent, and one that shows commercial progress. Review them together every week.","Keep a decision log so the next experiment starts from evidence rather than memory."]},{"type":"checklist","heading":"System check","items":["A shared audience definition","A useful point of view","A named owner for every experiment"]},{"type":"citations","heading":"Further reading","citations":[{"label":"B2B Institute: The long and the short of it","href":"https://business.linkedin.com/marketing-solutions/b2b-institute/research-and-thought-leadership/the-long-and-short-of-it"}]},{"type":"consultation","serviceId":"strategy","heading":"Turn the demand system into a growth plan","body":"This article’s demand-system approach connects directly to Positivus strategy work, where market positioning, channel choices, and learning rhythms become one practical growth plan.","actionLabel":"Discuss growth strategy"}]},
+    "he": {"slug":"maarechet-bikush-bat-kayma","title":"בנו מערכת ביקוש בת־קיימא","summary":"החליפו קמפיינים חד־פעמיים בדרך מחוברת ליצירת ביקוש, ללכידתו וללמידה ממנו.","blocks":[{"type":"keyTakeaways","heading":"עיקרי הדברים","items":["ביקוש מצטבר כשיש לצוות סיפור שוק משותף וקצב למידה קבוע.","אזנו בין יצירה, לכידה והמרה במקום לממן רק את הערוץ הרועש ביותר."]},{"type":"richText","heading":"התחילו מתנועת הקנייה","paragraphs":["מערכת ביקוש מתחילה ברגע שבו קונה מזהה בעיה יקרה. מפו את התנועה הזאת לפני שקובעים יעדי ערוצים.","שוחחו עם צוותי מכירות ושירות כדי לשמוע את המילים שאנשים משתמשים בהן כשהם מוכנים לשינוי."]},{"type":"richText","heading":"צרו לולאת למידה שבועית","paragraphs":["בחרו אות אחד לתשומת לב, אחד לכוונה ואחד להתקדמות מסחרית. בדקו אותם יחד בכל שבוע.","שמרו יומן החלטות כדי שהניסוי הבא יתחיל מראיות ולא מזיכרון."]},{"type":"checklist","heading":"בדיקת מערכת","items":["הגדרת קהל משותפת","נקודת מבט מועילה","בעלים מוגדר לכל ניסוי"]},{"type":"citations","heading":"לקריאה נוספת","citations":[{"label":"B2B Institute: The long and the short of it","href":"https://business.linkedin.com/marketing-solutions/b2b-institute/research-and-thought-leadership/the-long-and-short-of-it"}]},{"type":"consultation","serviceId":"strategy","heading":"הפכו את מערכת הביקוש לתכנית צמיחה","body":"גישת מערכת הביקוש במאמר קשורה ישירות לעבודת האסטרטגיה של פוזיטיבוס, שבה מיצוב שוק, בחירת ערוצים וקצב למידה הופכים לתכנית צמיחה מעשית אחת.","actionLabel":"שיחה על אסטרטגיית צמיחה"}]}
+  }
+}

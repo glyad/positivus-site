@@ -5,9 +5,12 @@ import {
   normalizeVerificationCode,
   passwordIssue,
   providerFromSearch,
-  providerStateFromSearch
+  providerStateFromSearch,
+  safeReturnPath,
+  withSafeReturnPath
 } from "./auth-core.mjs";
 import { authPages, authText } from "./auth-content.mjs";
+import { armPrototypeForm } from "./prototype-form.mjs";
 
 const html = document.documentElement;
 const body = document.body;
@@ -16,6 +19,7 @@ const languageToggles = [...document.querySelectorAll("[data-language-toggle]")]
 let currentLanguage = "en";
 
 const t = (key) => authText[key]?.[currentLanguage] ?? key;
+const commentReturnPath = safeReturnPath(new URLSearchParams(window.location.search).get("return"));
 
 function translatePage() {
   document.querySelectorAll("[data-i18n]").forEach((element) => {
@@ -219,6 +223,11 @@ const formTargets = {
   "reset-password": "password-updated.html"
 };
 
+function formTarget(type) {
+  if (type !== "sign-in" || !commentReturnPath) return formTargets[type];
+  return `account.html?return=${encodeURIComponent(commentReturnPath)}`;
+}
+
 document.querySelectorAll("[data-auth-form]").forEach((form) => {
   form.addEventListener("input", (event) => {
     const name = event.target.name;
@@ -231,8 +240,7 @@ document.querySelectorAll("[data-auth-form]").forEach((form) => {
     if (name) setFieldError(form, name);
   });
 
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
+  armPrototypeForm(form, () => {
     const status = form.querySelector("[data-form-status]");
     const issues = validateForm(form);
 
@@ -263,7 +271,7 @@ document.querySelectorAll("[data-auth-form]").forEach((form) => {
     }
 
     window.setTimeout(() => {
-      window.location.assign(formTargets[form.dataset.authForm]);
+      window.location.assign(formTarget(form.dataset.authForm));
     }, 550);
   });
 });
@@ -404,6 +412,18 @@ if (providerView && providerError) {
       errorBody.textContent = t(bodyKey);
     }
   }
+}
+
+const returnToArticle = document.querySelector("[data-return-to-article]");
+if (returnToArticle && commentReturnPath) {
+  returnToArticle.href = commentReturnPath;
+  returnToArticle.hidden = false;
+}
+
+if (commentReturnPath) {
+  document.querySelectorAll("[data-auth-social-flow-link]").forEach((link) => {
+    link.href = withSafeReturnPath(link.getAttribute("href"), commentReturnPath);
+  });
 }
 
 body.dataset.authReady = "true";

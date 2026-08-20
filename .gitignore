@@ -9,3 +9,5 @@ node_modules/
 !.env.example
 .idea/
 .vscode/
+.superpowers/
+.worktrees/

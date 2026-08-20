@@ -1,0 +1,20 @@
+[
+  {"id":"demand-generation","status":"active","locales":{"en":{"name":"Demand generation","slug":"demand-generation"},"he":{"name":"יצירת ביקוש","slug":"yetzirat-bikush"}}},
+  {"id":"positioning","status":"active","locales":{"en":{"name":"Positioning","slug":"positioning"},"he":{"name":"מיצוב","slug":"mitzuv"}}},
+  {"id":"technical-seo","status":"active","locales":{"en":{"name":"Technical SEO","slug":"technical-seo"},"he":{"name":"SEO טכני","slug":"seo-techni"}}},
+  {"id":"keyword-research","status":"active","locales":{"en":{"name":"Keyword research","slug":"keyword-research"},"he":{"name":"מחקר מילות מפתח","slug":"mechkar-milot-mafteach"}}},
+  {"id":"google-ads","status":"active","locales":{"en":{"name":"Google Ads","slug":"google-ads"},"he":{"name":"Google Ads","slug":"google-ads"}}},
+  {"id":"budgeting","status":"active","locales":{"en":{"name":"Budgeting","slug":"budgeting"},"he":{"name":"תכנון תקציב","slug":"tichnun-taktziv"}}},
+  {"id":"content-briefs","status":"active","locales":{"en":{"name":"Content briefs","slug":"content-briefs"},"he":{"name":"בריפים לתוכן","slug":"brifim-letochen"}}},
+  {"id":"brand-voice","status":"active","locales":{"en":{"name":"Brand voice","slug":"brand-voice"},"he":{"name":"קול מותג","slug":"kol-mutag"}}},
+  {"id":"community","status":"active","locales":{"en":{"name":"Community","slug":"community"},"he":{"name":"קהילה","slug":"kehila"}}},
+  {"id":"social-metrics","status":"active","locales":{"en":{"name":"Social metrics","slug":"social-metrics"},"he":{"name":"מדדי סושיאל","slug":"maddei-social"}}},
+  {"id":"welcome-series","status":"active","locales":{"en":{"name":"Welcome series","slug":"welcome-series"},"he":{"name":"סדרת הצטרפות","slug":"sidrat-hitztarfut"}}},
+  {"id":"retention","status":"active","locales":{"en":{"name":"Retention","slug":"retention"},"he":{"name":"שימור","slug":"shimur"}}},
+  {"id":"measurement","status":"active","locales":{"en":{"name":"Measurement","slug":"measurement"},"he":{"name":"מדידה","slug":"medida"}}},
+  {"id":"conversion-rate","status":"active","locales":{"en":{"name":"Conversion rate","slug":"conversion-rate"},"he":{"name":"שיעור המרה","slug":"shiur-hamara"}}},
+  {"id":"landing-pages","status":"active","locales":{"en":{"name":"Landing pages","slug":"landing-pages"},"he":{"name":"דפי נחיתה","slug":"dapei-nechita"}}},
+  {"id":"experimentation","status":"active","locales":{"en":{"name":"Experimentation","slug":"experimentation"},"he":{"name":"ניסויים","slug":"nisuyim"}}},
+  {"id":"b2b","status":"active","locales":{"en":{"name":"B2B","slug":"b2b"},"he":{"name":"B2B","slug":"b2b"}}},
+  {"id":"reporting","status":"active","locales":{"en":{"name":"Reporting","slug":"reporting"},"he":{"name":"דיווח","slug":"divuach"}}}
+]

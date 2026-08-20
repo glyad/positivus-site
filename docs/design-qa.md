@@ -1,5 +1,72 @@
 # Design QA
 
+## Blog v1.2.0 — Editorial Grid implementation audit
+
+### Source truth and evidence policy
+
+The approved Blog design is the **Editorial Grid prose specification** in `docs/superpowers/specs/2026-08-15-blog-v1.2.0-design.md`. No approved Blog reference bitmap exists. The authentication Green Gateway board is unrelated to this feature and was not copied, cited, or used for comparison; no misleading `blog-editorial-grid-v2-reference.png` was created.
+
+`docs/design-qa/blog-comparison.jpg` is therefore an implementation-only contact sheet comparing fresh English/Hebrew desktop and compact Blog Home captures with each other. It is not a reference-versus-implementation claim. All source screenshots were saved directly from the in-app browser and inspected after saving. Contact sheets scale complete copies for layout only; source captures remain untouched.
+
+The requested CSS viewports were 1440 × 900 and 430 × 932. The earlier in-app browser pass rendered 1439 × 900 for desktop evidence and enforced a 471 × 931 minimum for compact evidence; the final-review recapture rendered 1441 × 900. Exact 1440/430 rendering is a named provider limitation, not normalized evidence. The browser's capture surface also emitted high-density files with unused white area and embedded scroll chrome; these exact pixels were preserved rather than cropped, resized, stretched, or relabeled.
+
+### Accepted evidence inventory
+
+| Evidence | Browser state | Saved pixels |
+| --- | --- | --- |
+| `blog-home-desktop-en.png`, `blog-home-desktop-he.png` | EN LTR / HE RTL Blog Home; CSS 1439 × 900 | 2763 × 1765 each |
+| `blog-home-mobile-en.png`, `blog-home-mobile-he.png` | EN LTR / HE RTL compact Blog Home; CSS 471 × 931 | 865 × 1825 each |
+| `blog-results-filters-desktop-en.png` | Browse/filter shell and explicit Blog-index recovery | 2763 × 1765 |
+| `blog-article-desktop-en.png` | English article header, tools, hero, and article grid | 2763 × 1765 |
+| `blog-article-mobile-he.png` | Hebrew RTL compact article; CSS 471 × 931 | 865 × 1825 |
+| `blog-author-desktop-en.png` | English author profile | 2763 × 1765 |
+| `blog-category-seo-desktop-en.png` | SEO category route; CSS 1441 × 900 | 2767 × 3614 full page |
+| `blog-tag-technical-seo-desktop-en.png` | Technical SEO tag route; CSS 1441 × 900 | 2767 × 2665 full page |
+| `blog-series-growth-foundations-desktop-en.png` | Growth foundations series route; CSS 1441 × 900 | 2767 × 3627 full page |
+| `blog-authors-directory-desktop-en.png` | Authors directory with four cards; CSS 1441 × 900 | 2767 × 3412 full page |
+| `blog-global-search-desktop-en.png` | Shared search overlay and recovery actions | 2763 × 1765 |
+| `blog-empty-result-browser-blocked.png` | No-match query attempt with browser-blocked JSON and static recovery | 2763 × 1765 |
+| `blog-missing-translation-desktop-he.png` | Announced Hebrew missing-translation page | 2763 × 1765 |
+| `blog-comment-signed-out.png` | Corrected signed-out recovery spacing; CSS 1441 × 900 | 2767 × 9559 full page |
+| `blog-comment-signed-in.png` | Signed-in preview form | 2763 × 10094 full page |
+| `blog-comment-invalid.png` | Assertive validation and textarea focus recovery | 2763 × 10135 full page |
+| `blog-comment-success.png` | Local success announcement and one demo item | 2763 × 10229 full page |
+| `blog-comment-session-reset.png` | Reload notice and zero comments | 2763 × 10094 full page |
+| `blog-comparison.jpg` | Labeled implementation-only EN/HE desktop/compact contact sheet | 2200 × 1600 |
+| `blog-empty-and-translation-states.png` | Labeled recovery-state contact sheet | 2400 × 1040 |
+| `blog-comment-prototype-states.png` | Refreshed labeled five-state comment contact sheet | 2767 × 1951 |
+
+### Numbered functional and visual QA flow
+
+1. **Preview health — verified for the current build.** Rebuilt and served the current worktree at `http://127.0.0.1:4173/`; the package intentionally remained at feature-work version 1.1.0. Fresh Blog pages, styles, routes, and manifest content were present.
+2. **Blog Home and responsive direction — visually verified with a viewport limitation.** Inspected EN LTR and HE RTL at desktop and the provider's compact minimum. Editorial hierarchy, lime/near-black/gray tokens, mirrored reading order, search control, chips, featured guide, and compact navigation remained coherent with no visible root overflow. Exact requested viewport pixels were unavailable as documented above.
+3. **Blog browse, both searches, filters, sort, and empty results — NOT FULLY VERIFIED; browser-blocked.** The server-rendered browse shell, all filter groups, sort control, 12-item first page, numbered pagination, recovery copy, and static result cards rendered. The final-review run again exposed the designed unavailable-index fallback because the in-app browser blocked the same-origin JSON enhancement. Client-side Blog search, every live filter/sort permutation, shared-search results, drawer initialization, focus containment, and a genuine calculated empty result therefore remain unverified manually. Automated schema/core/render/build tests cover these behaviors, but are not represented here as manual PASS evidence.
+4. **Generated route-family matrix — verified for the reachable captured routes.** Fresh full-page evidence covers `/blog/category/seo/`, `/blog/tag/technical-seo/`, `/blog/series/growth-foundations/`, and `/blog/authors/`; the visible headings were SEO, Technical SEO, Growth foundations, and Meet the authors, and the directory exposed four author cards. Earlier route checks covered browse pagination, an author profile, and available Hebrew peers. The fresh capture set closes the previously missing category/tag/series/authors-directory evidence row; it does not imply that every localized route permutation was manually recaptured.
+5. **Article journey and tools — PARTIALLY VERIFIED.** Inspected EN desktop and HE compact article composition, metadata, hero, semantic blocks, table of contents, tags, series navigation, related reading, and recovery links. Copy Link announced “Link copied” without URL mutation. A TOC link was activated, but the in-app browser did not expose a reliable hash/current-section assertion. Print was invoked in an isolated browser tab; the browser API does not expose the system print-preview surface for inspection. Those two checks remain unverified rather than PASS.
+6. **Missing translation — visually verified.** `/he/blog/analytics-attribution-models/` rendered `lang="he"`, `dir="rtl"`, the announced missing-translation state, English-article recovery, and Blog-home recovery instead of silent language fallback.
+7. **Newsletter and contextual consultation — visually verified within the prototype surface.** Earlier browser evidence covered newsletter validation and the explicit not-sent/not-stored success copy without URL mutation. The current paid-media article capture shows the new reading-column consultation block, explains how the learning-budget framework relates to Positivus paid-media planning, and exposes a service-specific contact link; it is not a personal-data form.
+8. **Shared global search overlay — NOT FULLY VERIFIED; browser-blocked.** The Blog-header trigger opened the dialog and moved focus to the query field; the close button restored focus to the trigger. JSON blocking forced the designed recovery links instead of live results. Escape dismissal and live results remain automated-only and are not claimed as manual PASS evidence.
+9. **Comment demonstration — PARTIALLY VERIFIED after fixes.** The refreshed signed-out capture and computed-style inspection prove that the form is hidden and the two recovery links use a flex layout with 18px logical column spacing and 12px row spacing. Earlier accepted captures cover signed-in, invalid, success, and reload-reset states; the five-state sheet was refreshed and inspected. Timer/list/textarea cleanup on `pagehide` and persisted `pageshow` is covered by a real `EventTarget`/timer test, but this browser surface did not expose a reliable BFCache assertion, so that lifecycle check remains manually unverified.
+10. **Console, assets, overflow, and privacy evidence — LIMITED EVIDENCE, not a privacy PASS.** Earlier supported console-log inspection returned no warnings or errors after its flow, and accepted captures show local artwork without a visible missing asset or root-level overflow. The Browser API has no network panel and policy forbids storage/cookie/history inspection. Unchanged URLs and reload-cleared comments are useful observations, but transport and persistence claims depend on source review and automated behavioral tests described below.
+
+### Findings, fix, and post-fix result
+
+- **P1 fixed — signed-out comment form visibly leaked through its `hidden` state.** The renderer correctly emitted `hidden`, but `[data-demo-comments] form { display: grid; }` overrode the user-agent hidden rule. A focused build regression was added first and observed failing; `[data-demo-comment-form][hidden] { display: none; }` was then added as the minimal production fix. The focused test passed, browser inspection reported signed-out form hidden/signed-out recovery visible, and all five comment captures were freshly replaced and inspected.
+- **P2 fixed — signed-out recovery links visually concatenated.** The action row now has explicit logical row/column gaps. The final-review capture was saved and inspected, and the five-state contact sheet was regenerated from the accepted source captures.
+- **No new visible P0/P1/P2 defect** was observed in the routes reached during the final-review recapture. The named browser and assistive-technology gaps below remain unverified acceptance checks, not passes and not inferred defects.
+
+### UX and accessibility assessment
+
+- Confirmed strengths from visual/DOM evidence: the Editorial Grid hierarchy is clear across languages; logical properties mirror RTL without flipping the brand/hero artwork; headings, landmarks, breadcrumbs, route-specific skip links, filter associations/count copy, native dialog/details/form controls, focus styling, live status/alert regions, recovery links, and semantic article metadata are present.
+- The recovery language is specific and actionable: unavailable indexes retain server-rendered content; missing translations preserve a path to the peer article/home; newsletter/consultation/comments state their prototype and privacy boundaries.
+- **UNVERIFIED / NOT RUN:** no screen-reader session, browser zoom/reflow matrix, high-contrast session, or reduced-motion media emulation was available. Print preview, search-dialog Escape dismissal, live client-filter focus behavior, compact drawer behavior, dynamic empty results, and persisted BFCache restoration were also not manually confirmed. Automated tests and CSS/source review are supporting nonvisual evidence only; they do not turn these manual checks into PASS.
+
+### Browser evidence limits and privacy claims
+
+The Browser API has no DevTools network panel. It also was not used to inspect cookies, localStorage/sessionStorage, history, profiles, or credentials. Accordingly, this report does **not** claim direct network/storage-panel evidence. Manual proof is limited to unchanged URLs, disclosed prototype copy, hidden/non-submittable initial controls, and reload-cleared comments. Source review and behavioral tests establish that personal prototype controls start disabled, only arm after handlers exist, perform no transport, and never write personal values to URLs, logs, measurement, or storage. Comment data and pending timers live only in a transient in-memory session object and are cleared on exit/restoration; CMS credentials/endpoints remain absent from browser output.
+
+Blog audit result: **NOT FULLY VERIFIED.** Reachable static routes and the corrected signed-out state have accepted visual evidence, but the explicitly listed browser/assistive-technology checks remain blocked or not run and are not reported as PASS. No approved Blog reference bitmap exists.
+
 ## Authentication extension
 
 The approved Green Gateway v2 authentication system has its own complete source-to-browser comparison report at [`design-qa.md`](../design-qa.md). The evidence covers English LTR, Hebrew RTL, desktop, mobile, successful journeys, and exceptional states; its final result is passed.

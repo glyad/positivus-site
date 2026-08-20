@@ -1,0 +1,43 @@
+name: Content build
+
+on:
+  workflow_dispatch:
+  repository_dispatch:
+    types:
+      - content-published
+
+permissions:
+  contents: read
+
+jobs:
+  validate-content-build:
+    name: Validate and package content build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Check out triggering content ref
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.client_payload.ref || github.ref }}
+          persist-credentials: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install repository metadata
+        run: npm ci
+
+      - name: Validate content and build the site
+        run: npm run check
+
+      - name: Upload validated static build
+        uses: actions/upload-artifact@v7
+        with:
+          name: positivus-content-build-${{ github.sha }}
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14

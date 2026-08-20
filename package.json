@@ -1,6 +1,6 @@
 {
   "name": "positivus-static-site",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "Dependency-free bilingual Positivus landing page with English LTR and Hebrew RTL layouts.",
   "private": true,
   "type": "module",
@@ -19,8 +19,9 @@
   "scripts": {
     "branch:check": "node scripts/branch-policy.mjs",
     "build": "node scripts/build.mjs",
-    "check": "npm run format:check && npm run lint && npm test && npm run build",
+    "check": "npm run format:check && npm run lint && npm run content:check && npm test && npm run build",
     "clean": "node scripts/clean.mjs",
+    "content:check": "node scripts/validate-content.mjs",
     "dev": "node scripts/dev.mjs",
     "format:check": "node scripts/format-check.mjs",
     "lint": "node scripts/validate.mjs",

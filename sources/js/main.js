@@ -1,3 +1,6 @@
+import { armPrototypeForm } from "./prototype-form.mjs";
+import { landingBlogHref } from "./language-routing.mjs";
+
 (() => {
   const html = document.documentElement;
   const body = document.body;
@@ -12,6 +15,9 @@
     Blog: "בלוג",
     "Sign in": "התחברות",
     "Request a quote": "בקשת הצעת מחיר",
+    "Search Positivus": "חיפוש בפוזיטיבוס",
+    "Search the Positivus site": "חיפוש באתר פוזיטיבוס",
+    "Close search": "סגירת החיפוש",
     "Navigating the digital landscape for success": "מנווטים בנוף הדיגיטלי להצלחה",
     "Our digital marketing agency helps businesses grow and succeed online through a range of services including SEO, PPC, social media marketing, and content creation.":
       "הסוכנות שלנו לשיווק דיגיטלי עוזרת לעסקים לצמוח ולהצליח אונליין באמצעות מגוון שירותים, בהם SEO, PPC, שיווק ברשתות חברתיות ויצירת תוכן.",
@@ -131,6 +137,7 @@
       "Close navigation": "סגירת הניווט",
       "Dismiss navigation overlay": "סגירת שכבת הניווט",
       "Primary navigation": "ניווט ראשי",
+      "Search Positivus": "חיפוש בפוזיטיבוס",
       "Companies we have worked with": "חברות שעבדנו איתן",
       "Case studies": "מקרי בוחן",
       "Choose testimonial": "בחירת המלצה",
@@ -263,6 +270,9 @@
     translateTextNodes(currentLanguage);
     translateAttributes(currentLanguage);
     translateServiceHeadings(currentLanguage);
+    document.querySelectorAll("[data-blog-link]").forEach((link) => {
+      link.setAttribute("href", landingBlogHref(currentLanguage));
+    });
     updateLanguageToggle();
 
     if (persist) {
@@ -451,8 +461,7 @@
 
   const contactForm = document.querySelector("[data-contact-form]");
 
-  contactForm?.addEventListener("submit", (event) => {
-    event.preventDefault();
+  armPrototypeForm(contactForm, () => {
     const status = contactForm.querySelector("[data-form-status]");
     const fields = [
       { name: "email", message: "Enter a valid email address." },
@@ -488,8 +497,7 @@
 
   const newsletter = document.querySelector("[data-newsletter-form]");
 
-  newsletter?.addEventListener("submit", (event) => {
-    event.preventDefault();
+  armPrototypeForm(newsletter, () => {
     const input = newsletter.elements.email;
     const status = newsletter.querySelector("[data-newsletter-status]");
 
