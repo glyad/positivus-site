@@ -1,9 +1,90 @@
 import assert from "node:assert/strict";
-import { readFile, stat } from "node:fs/promises";
+import { spawnSync } from "node:child_process";
+import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 
 import { buildSite, repositoryRoot } from "../scripts/build.mjs";
+
+test("generated blog pages expose required accessibility and state hooks", async () => {
+  await buildSite();
+  const article = await readFile(resolve(repositoryRoot, "dist/blog/seo-audit-90-minutes/index.html"), "utf8");
+  for (const fragment of [
+    'href="#main-content"',
+    "<article",
+    'aria-label="Breadcrumb"',
+    'aria-live="polite"',
+    "data-copy-link",
+    "data-demo-comments"
+  ]) assert.match(article, new RegExp(fragment));
+});
+
+test("content check validates the repository fixtures through its public command", () => {
+  const result = spawnSync("npm", ["run", "content:check"], {
+    cwd: repositoryRoot,
+    encoding: "utf8",
+    env: { ...process.env, PATH: "/Users/davidkossoglyad/.nvm/versions/node/v26.6.0/bin:/usr/bin:/bin" }
+  });
+
+  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+  assert.match(result.stdout, /Blog content validation passed\./);
+});
+
+test("content failures are grouped by record, locale, and field", async () => {
+  const validation = await import("../scripts/validate-content.mjs");
+  assert.equal(typeof validation.formatContentValidationError, "function");
+  const output = validation.formatContentValidationError(new AggregateError([
+    new Error("[seo-audit] [en] hero.alt: must be a non-empty string"),
+    new Error("[seo-audit] [he] blocks[2].href: must be a safe link"),
+    new Error("[maya-chen] [record] portrait: must be a safe local asset path")
+  ], "Invalid blog content"));
+
+  assert.equal(output, `Blog content validation failed.
+Record: maya-chen
+  Locale: record
+    portrait: must be a safe local asset path
+Record: seo-audit
+  Locale: en
+    hero.alt: must be a non-empty string
+  Locale: he
+    blocks[2].href: must be a safe link`);
+});
+
+test("generated-site guards report broken references, unsupported runtime assets, sentinels, duplicate IDs, and language peers", async () => {
+  let guards;
+  try {
+    guards = await import("../scripts/generated-site-guards.mjs");
+  } catch {
+    guards = null;
+  }
+  assert.equal(typeof guards?.validateGeneratedSite, "function");
+
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-generated-guards-"));
+  try {
+    await mkdir(resolve(outputDir, "en"), { recursive: true });
+    await writeFile(resolve(outputDir, "en/index.html"), `<!doctype html><html><head>
+      <link rel="canonical" href="https://example.test/en/">
+      <link rel="alternate" hreflang="he" href="https://example.test/he/">
+      <script src="https://tracker.invalid/runtime.js"></script>
+      </head><body><main id="same"><p id="same">%%BROKEN%%</p><span data-content-id="tracking"></span><span data-content-id="tracking"></span><img src="missing.webp"></main></body></html>`);
+
+    const failures = await guards.validateGeneratedSite({
+      outputDir,
+      entrypoints: ["en/index.html", "../escaped.html"]
+    });
+    assert.deepEqual(failures, [
+      "generated path escapes output: ../escaped.html",
+      "en/index.html: duplicate id same",
+      "en/index.html: missing local reference missing.webp",
+      "en/index.html: third-party runtime CSS or JavaScript detected",
+      "en/index.html: unresolved document sentinel %%BROKEN%%",
+      "en/index.html: missing reciprocal language peer https://example.test/he/"
+    ]);
+  } finally {
+    await rm(outputDir, { recursive: true, force: true });
+  }
+});
 
 test("build creates the deployable static site", async () => {
   const outputDir = await buildSite();

@@ -24,7 +24,12 @@ const copy = {
     tagIndex: "All topics", backToTagIndex: "Browse all topics", relatedCategories: "Related categories", formats: "Formats", levels: "Levels", apply: "Apply",
     featuredInCategory: "Featured in this category", remainingInCategory: "More in this category", articles: "Articles", guides: "Guides", seriesCount: "Series", authorSearch: "Find an author", authorExpertise: "Expertise", showTopics: "Show topics", publishedFrom: "Published from", publishedThrough: "Published through",
     empty: "New insights are on the way", emptyBody: "Search the blog or browse our topics while we prepare the next practical guide.",
-    siteSearch: "Search Positivus", siteSearchBody: "Browse our services, case studies, and practical marketing guides.", services: "Services", useCases: "Case studies"
+    siteSearch: "Search Positivus", siteSearchBody: "Browse our services, case studies, and practical marketing guides.", services: "Services", useCases: "Case studies", breadcrumb: "Breadcrumb",
+    loadingResults: "Loading the current Blog index.", browseLoaded: "Browse the server-rendered articles", missingImage: "This image is unavailable.", continueReading: "Continue reading",
+    newsletterRetry: "Try another email", consultationStatus: "Consultation requests are a prototype and are not sent.", requestQuote: "Request a quote",
+    commentSessionReset: "This page starts a new demonstration comment session.", writeComment: "Write a demo comment",
+    withdrawnTitle: "This content has been withdrawn", withdrawnBody: "The editorial team removed this article from the current publication.", withdrawnAction: "Browse current insights",
+    previewTitle: "This preview is invalid or expired", previewBody: "Protected previews require a current editorial link.", previewAction: "Request a valid preview"
   },
   he: {
     latest: "תובנות אחרונות", featured: "מדריך נבחר", evergreen: "למידה מתמשכת",
@@ -46,7 +51,12 @@ const copy = {
     tagIndex: "כל הנושאים", backToTagIndex: "לכל הנושאים", relatedCategories: "קטגוריות קשורות", formats: "פורמטים", levels: "רמות", apply: "החלה",
     featuredInCategory: "נבחר בקטגוריה", remainingInCategory: "עוד בקטגוריה", articles: "מאמרים", guides: "מדריכים", seriesCount: "סדרות", authorSearch: "חיפוש כותב", authorExpertise: "מומחיות", showTopics: "הצגת נושאים", publishedFrom: "פורסם מתאריך", publishedThrough: "פורסם עד תאריך",
     empty: "תובנות חדשות בדרך", emptyBody: "חפשו בבלוג או עיינו בנושאים שלנו בזמן שאנחנו מכינים את המדריך המעשי הבא.",
-    siteSearch: "חיפוש בפוזיטיבוס", siteSearchBody: "עיינו בשירותים שלנו, במקרי הבוחן ובמדריכי השיווק המעשיים.", services: "שירותים", useCases: "מקרי בוחן"
+    siteSearch: "חיפוש בפוזיטיבוס", siteSearchBody: "עיינו בשירותים שלנו, במקרי הבוחן ובמדריכי השיווק המעשיים.", services: "שירותים", useCases: "מקרי בוחן", breadcrumb: "פירורי לחם",
+    loadingResults: "אינדקס הבלוג הנוכחי נטען.", browseLoaded: "עיון במאמרים שכבר נטענו", missingImage: "התמונה אינה זמינה.", continueReading: "המשך קריאה",
+    newsletterRetry: "ניסיון עם כתובת אחרת", consultationStatus: "בקשות ייעוץ הן אב־טיפוס ואינן נשלחות.", requestQuote: "בקשת הצעת מחיר",
+    commentSessionReset: "העמוד מתחיל מפגש חדש של תגובות הדגמה.", writeComment: "כתיבת תגובת הדגמה",
+    withdrawnTitle: "התוכן הזה הוסר", withdrawnBody: "צוות העריכה הסיר את המאמר מהפרסום הנוכחי.", withdrawnAction: "עיון בתובנות עדכניות",
+    previewTitle: "התצוגה המקדימה אינה תקפה או שפג תוקפה", previewBody: "תצוגות מוגנות דורשות קישור עריכה עדכני.", previewAction: "בקשת תצוגה מקדימה תקפה"
   }
 };
 
@@ -156,10 +166,10 @@ export function renderArticleCard({ model, locale, outputPath, article, featured
   const target = articleRoute(article, locale);
   const ui = copy[locale];
   const artwork = featured ? `<figure class="blog-card__artwork"><img src="${escapeAttribute(asset(outputPath, article.hero.src))}" alt="${escapeAttribute(article.hero.decorative ? "" : article.hero.alt[locale])}" /></figure>` : "";
-  return `<article class="blog-card" data-article-card${featured ? " data-featured-card" : ""}>
+  return `<article class="blog-card" data-article-card data-content-id="${escapeAttribute(article.id)}"${featured ? " data-featured-card" : ""}>
   ${artwork}
   <p class="blog-card__category">${text(category.name)}</p>
-  <h3><a href="${escapeAttribute(href(outputPath, target))}">${text(content.title)}</a></h3>
+  <h3><a href="${escapeAttribute(href(outputPath, target))}" data-measure-action="result-select" data-content-type="article" data-content-id="${escapeAttribute(article.id)}">${text(content.title)}</a></h3>
   <p>${text(content.summary)}</p>
   <p class="blog-card__meta"><span>${text(ui.by)} ${text(author.name)}</span> · ${time(article.publishedAt, locale)}</p>
   <p class="blog-card__details">${labelsFor(article, locale)}</p>
@@ -172,7 +182,7 @@ export function renderAuthorCard({ model, locale, outputPath, author }) {
   const ui = copy[locale];
   return `<article class="author-card" data-author-card data-author-name="${escapeAttribute(content.name)}" data-author-bio="${escapeAttribute(content.bio)}" data-author-expertise-values="${escapeAttribute((author.expertise ?? []).join(" "))}">
   <img src="${escapeAttribute(asset(outputPath, author.portrait))}" alt="${escapeAttribute(content.name)}" />
-  <h3><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "author", slug: content.slug })))}">${text(content.name)}</a></h3>
+  <h3><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "author", slug: content.slug })))}" data-measure-action="author-navigate" data-content-type="author" data-content-id="${escapeAttribute(author.id)}">${text(content.name)}</a></h3>
   <p>${text(content.role)}</p><p>${text(content.bio)}</p>
   <p data-author-expertise>${(Array.isArray(author.expertise) ? author.expertise : []).map((value) => text(expertiseLabel(model, value, locale))).join(", ")}</p>
   <p data-author-count>${articles.length} ${text(ui.entries)}</p>
@@ -193,7 +203,7 @@ export function renderTagCloud({ model, locale, outputPath }) {
     const content = localized(tag, locale);
     const count = counts[index];
     const weight = Math.max(1, Math.min(5, Math.ceil((count / maximum) * 5)));
-    return `<li><a class="tag-weight-${weight}" aria-label="${escapeAttribute(countLabel(content.name, count))}" href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "tag", slug: content.slug })))}">${text(content.name)} <span>(${count})</span></a></li>`;
+    return `<li><a class="tag-weight-${weight}" aria-label="${escapeAttribute(countLabel(content.name, count))}" href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "tag", slug: content.slug })))}" data-measure-action="tag-navigate" data-content-type="tag" data-content-id="${escapeAttribute(tag.id)}">${text(content.name)} <span>(${count})</span></a></li>`;
   }).join("")}</ul>
 </section>`;
 }
@@ -206,7 +216,7 @@ function renderTagEntries({ model, locale, outputPath }) {
     .map((tag) => {
       const content = localized(tag, locale);
       const count = articles.filter((article) => article.tags.includes(tag.id)).length;
-      return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "tag", slug: content.slug })))}">${text(content.name)} <span>(${count})</span></a></li>`;
+      return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "tag", slug: content.slug })))}" data-measure-action="tag-navigate" data-content-type="tag" data-content-id="${escapeAttribute(tag.id)}">${text(content.name)} <span>(${count})</span></a></li>`;
     }).join("");
 }
 
@@ -220,13 +230,13 @@ export function renderNewsletterPanel({ locale }) {
   const ui = copy[locale];
   return `<section class="blog-newsletter" aria-labelledby="newsletter-title">
   <h2 id="newsletter-title">${text(ui.newsletter)}</h2><p>${text(ui.newsletterBody)}</p>
-  <form data-newsletter-form data-prototype="true"><label for="newsletter-email">${text(ui.email)}</label><input id="newsletter-email" name="email" type="email" autocomplete="email" required /><button type="submit">${text(ui.subscribe)}</button></form>
+  <form data-newsletter-form data-prototype="true"><label for="newsletter-email">${text(ui.email)}</label><input id="newsletter-email" name="email" type="email" autocomplete="email" required /><button type="submit">${text(ui.subscribe)}</button></form><p data-newsletter-status role="status" aria-live="polite"></p><button type="button" data-newsletter-retry data-state-recovery hidden>${text(ui.newsletterRetry)}</button>
 </section>`;
 }
 
 export function renderBreadcrumbs({ locale, outputPath, items }) {
   const ui = copy[locale];
-  return `<nav aria-label="${text(ui.home)}" data-breadcrumbs><ol>${items.map((item, index) => {
+  return `<nav aria-label="${text(ui.breadcrumb)}" data-breadcrumbs><ol>${items.map((item, index) => {
     const label = text(item.label);
     return index === items.length - 1 ? `<li aria-current="page">${label}</li>` : `<li><a href="${escapeAttribute(href(outputPath, item.outputPath))}">${label}</a><span class="breadcrumbs__separator" aria-hidden="true">/</span></li>`;
   }).join("")}</ol></nav>`;
@@ -256,7 +266,7 @@ export function renderBlogHome({ model, template, locale, version = "", outputPa
     : `<section class="shell" data-blog-empty><h2>${text(ui.empty)}</h2><p>${text(ui.emptyBody)}</p><p><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "browse" })))}">${text(ui.browse)}</a></p></section>`;
   const mainHtml = `<section class="blog-home shell" data-blog-home data-build-version="${escapeAttribute(version)}">
   <p>${text(ui.home)}</p><h1 id="page-title">${text(settings.title)}</h1><p>${text(settings.summary)}</p>${renderSearch({ locale, outputPath })}
-  <nav aria-label="${text(ui.categories)}"><ul>${categories.map((category) => { const entry = localized(category, locale); return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "category", slug: entry.slug })))}">${text(entry.name)}</a></li>`; }).join("")}</ul></nav>
+  <nav aria-label="${text(ui.categories)}"><ul>${categories.map((category) => { const entry = localized(category, locale); return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "category", slug: entry.slug })))}" data-measure-action="category-navigate" data-content-type="category" data-content-id="${escapeAttribute(category.id)}">${text(entry.name)}</a></li>`; }).join("")}</ul></nav>
 </section>
 ${articleSections}
 <section class="shell" aria-labelledby="authors-title"><h2 id="authors-title">${text(ui.authors)}</h2><div class="author-grid">${model.authors.filter((author) => localized(author, locale)).sort((a, b) => localized(a, locale).name.localeCompare(localized(b, locale).name, locale)).map((author) => renderAuthorCard({ model, locale, outputPath, author })).join("")}</div></section>
@@ -297,9 +307,9 @@ export function renderBrowsePage({ model, template, locale, page = 1, outputPath
   const pages = Math.max(1, Math.ceil(articles.length / 12));
   const currentPage = Math.min(Math.max(1, page), pages);
   const index = href(outputPath, `blog/search-index-${locale}.json`);
-  const mainHtml = `<section class="shell" data-blog-browse data-blog-static-page="${currentPage}" data-blog-index="${escapeAttribute(index)}"><h1 id="page-title">${text(ui.allInsights)}</h1>${renderSearch({ locale, outputPath })}
+  const mainHtml = `<section class="shell" data-blog-browse data-blog-static-page="${currentPage}" data-blog-index="${escapeAttribute(index)}"><h1 id="page-title">${text(ui.allInsights)}</h1>${renderSearch({ locale, outputPath })}<p data-blog-runtime-status role="status" aria-live="polite" hidden>${text(ui.loadingResults)} <a href="#blog-results" data-state-recovery>${text(ui.browseLoaded)}</a></p>
   ${renderBrowseFilters({ model, locale, articles })}
-  <label>${text(ui.sort)} <select data-blog-sort><option value="newest">${text(ui.newest)}</option><option value="relevance">${text(ui.relevance)}</option><option value="oldest">${text(ui.oldest)}</option><option value="updated">${text(ui.updatedSort)}</option></select></label><h2 data-results-heading tabindex="-1">${text(ui.allInsights)}</h2><p data-result-count aria-live="polite">${articles.length} ${text(ui.results)}</p>
+  <label>${text(ui.sort)} <select data-blog-sort><option value="newest">${text(ui.newest)}</option><option value="relevance">${text(ui.relevance)}</option><option value="oldest">${text(ui.oldest)}</option><option value="updated">${text(ui.updatedSort)}</option></select></label><h2 id="blog-results" data-results-heading tabindex="-1">${text(ui.allInsights)}</h2><p data-result-count aria-live="polite">${articles.length} ${text(ui.results)}</p>
   ${cards({ model, locale, outputPath, articles: articles.slice((currentPage - 1) * 12, currentPage * 12) })}${renderPagination({ locale, outputPath, articleCount: articles.length, page: currentPage })}${renderTagCloud({ model, locale, outputPath })}</section>`;
   return documentPage({ model, template, locale, outputPath, alternateOutputPath, title: ui.allInsights, description: ui.noResultsBody, mainHtml, robots: "noindex, follow" });
 }
@@ -373,7 +383,7 @@ function renderSeriesNavigation({ model, article, locale, outputPath }) {
   const ui = copy[locale]; const series = model.byId.series.get(article.series); const entries = seriesEntries(model, series, locale); const index = entries.findIndex((entry) => entry.id === article.id);
   const content = localized(series, locale);
   const previous = entries[index - 1]; const next = entries[index + 1];
-  return `<nav data-series-navigation aria-label="${text(ui.series)}"><p>${text(ui.series)}: <a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "series", slug: content.slug })))}">${text(content.title)}</a></p>${previous ? `<a rel="prev" href="${escapeAttribute(href(outputPath, articleRoute(previous, locale)))}">${text(ui.previousEntry)}</a>` : ""}${next ? `<a rel="next" href="${escapeAttribute(href(outputPath, articleRoute(next, locale)))}">${text(ui.nextEntry)}</a>` : ""}</nav>`;
+  return `<nav data-series-navigation aria-label="${text(ui.series)}"><p>${text(ui.series)}: <a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "series", slug: content.slug })))}" data-measure-action="series-navigate" data-content-type="series" data-content-id="${escapeAttribute(series.id)}">${text(content.title)}</a></p>${previous ? `<a rel="prev" href="${escapeAttribute(href(outputPath, articleRoute(previous, locale)))}">${text(ui.previousEntry)}</a>` : ""}${next ? `<a rel="next" href="${escapeAttribute(href(outputPath, articleRoute(next, locale)))}">${text(ui.nextEntry)}</a>` : ""}</nav>`;
 }
 
 function anchorRenderedHeadings(html) {
@@ -389,16 +399,17 @@ function anchorRenderedHeadings(html) {
 export function renderArticlePage({ model, template, locale, article, outputPath = articleRoute(article, locale) }) {
   const ui = copy[locale]; const content = localized(article, locale); const category = localized(categoryFor(model, article), locale); const author = authorFor(model, article.primaryAuthor); const authorContent = localized(author, locale);
   const reviewer = article.reviewer ? localized(authorFor(model, article.reviewer), locale) : null;
-  const hero = `<figure class="article-hero"><img src="${escapeAttribute(asset(outputPath, article.hero.src))}" alt="${escapeAttribute(article.hero.decorative ? "" : article.hero.alt[locale])}" /></figure>`;
+  const hero = `<figure class="article-hero"><img data-article-image src="${escapeAttribute(asset(outputPath, article.hero.src))}" alt="${escapeAttribute(article.hero.decorative ? "" : article.hero.alt[locale])}" /><figcaption data-image-fallback role="status" aria-live="polite" hidden>${text(ui.missingImage)} <a href="#article-body" data-state-recovery>${text(ui.continueReading)}</a></figcaption></figure>`;
   const metadata = `<div class="article-meta"><p data-article-author>${text(ui.by)} ${text(authorContent.name)}${article.coAuthors?.length ? `, ${article.coAuthors.map((id) => text(localized(authorFor(model, id), locale).name)).join(", ")}` : ""}</p>${reviewer ? `<p>${text(ui.reviewedBy)} ${text(reviewer.name)}</p>` : ""}<p><span>${text(ui.published)} </span>${time(article.publishedAt, locale)}</p><p><span>${text(ui.updated)} </span><time itemprop="dateModified" datetime="${escapeAttribute(article.editedAt.toISOString())}">${text(dateLabel(article.editedAt, locale))}</time></p><meta itemprop="datePublished" content="${escapeAttribute(article.publishedAt.toISOString())}" /><p>${labelsFor(article, locale)}</p></div>`;
-  const tags = article.tags.map((id) => { const tag = localized(tagFor(model, id), locale); return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "tag", slug: tag.slug })))}">${text(tag.name)}</a></li>`; }).join("");
+  const tags = article.tags.map((id) => { const tag = localized(tagFor(model, id), locale); return `<li><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "tag", slug: tag.slug })))}" data-measure-action="tag-navigate" data-content-type="tag" data-content-id="${escapeAttribute(id)}">${text(tag.name)}</a></li>`; }).join("");
   const body = renderBlocks(content.blocks, { locale, resolveAsset: (source) => asset(outputPath, source), consultation: article.relatedService ? { serviceId: article.relatedService } : null });
   const anchored = anchorRenderedHeadings(body);
   const returnPath = `${outputPath}?commenter=demo#comments`;
   const signInHref = `${href(outputPath, "sign-in.html")}?return=${encodeURIComponent(returnPath)}`;
   const toc = anchored.headings.map((heading, index) => `<li${index === 0 ? " data-toc-current" : ""}><a href="#${heading.id}">${heading.label}</a></li>`).join("");
-  const comments = `<section id="comments" data-demo-comments data-prototype="true" data-demo-comment-state="signed-out"><h2>${text(ui.comments)}</h2><p>${text(ui.commentsBody)}</p><p lang="en" data-demo-comment-notice>${text(ui.demoCommentNotice)}</p><div data-demo-comment-signed-out><a data-demo-comment-sign-in href="${escapeAttribute(signInHref)}">${text(ui.signInToComment)}</a><a data-demo-comment-preview href="?commenter=demo#comments">${text(ui.previewSignedIn)}</a></div><form data-demo-comment-form hidden><label for="demo-comment">${text(ui.addComment)}</label><textarea id="demo-comment" name="comment" minlength="2" maxlength="2000" required aria-describedby="demo-comment-guidance demo-comment-status"></textarea><p id="demo-comment-guidance">${text(ui.commentGuidance)}</p><button type="submit">${text(ui.submitComment)}</button></form><p data-demo-comment-status role="status" aria-live="polite"></p><ol data-demo-comment-list></ol></section>`;
-  const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: category.name, outputPath: blogRoute({ locale, kind: "category", slug: category.slug }) }, { label: content.title }] })}<article class="shell article-page" data-article-page itemscope itemtype="https://schema.org/Article"><header><p>${text(category.name)} · ${text(dimension(article.level, locale))}</p><h1 id="page-title" itemprop="headline">${text(content.title)}</h1><p itemprop="description">${text(content.summary)}</p>${metadata}${hero}<div class="article-tools"><button type="button" data-copy-link>${text(ui.copyLink)}</button><button type="button" data-print-article>${text(ui.print)}</button><p data-article-tools-status role="status" aria-live="polite"></p></div></header><details data-article-toc open><summary>${text(ui.tableOfContents)}</summary><ol>${toc}</ol></details><div class="article-body" itemprop="articleBody">${anchored.html}</div><section data-article-tags><h2>${text(ui.tags)}</h2><ul>${tags}</ul></section>${article.correctionNote?.[locale] ? `<p data-correction-note>${text(article.correctionNote[locale])}</p>` : ""}${renderSeriesNavigation({ model, article, locale, outputPath })}<section data-related-content><h2>${text(ui.related)}</h2>${cards({ model, locale, outputPath, articles: relatedArticles(model, article, locale) })}</section>${renderNewsletterPanel({ locale })}${comments}</article>`;
+  const comments = `<section id="comments" data-demo-comments data-prototype="true" data-demo-comment-state="signed-out"><h2>${text(ui.comments)}</h2><p>${text(ui.commentsBody)}</p><p lang="en" data-demo-comment-notice>${text(ui.demoCommentNotice)}</p><div data-demo-comment-signed-out data-system-state="signed-out-comment" role="status" aria-live="polite"><a data-demo-comment-sign-in data-state-recovery href="${escapeAttribute(signInHref)}">${text(ui.signInToComment)}</a><a data-demo-comment-preview href="?commenter=demo#comments">${text(ui.previewSignedIn)}</a></div><form data-demo-comment-form hidden><label for="demo-comment">${text(ui.addComment)}</label><textarea id="demo-comment" name="comment" minlength="2" maxlength="2000" required aria-describedby="demo-comment-guidance demo-comment-status"></textarea><p id="demo-comment-guidance">${text(ui.commentGuidance)}</p><button type="submit">${text(ui.submitComment)}</button></form><p data-demo-comment-status role="status" aria-live="polite"></p><p data-comment-session-reset role="status" aria-live="polite" hidden>${text(ui.commentSessionReset)} <button type="button" data-comment-write data-state-recovery>${text(ui.writeComment)}</button></p><ol data-demo-comment-list></ol></section>`;
+  const consultationStatus = article.relatedService ? `<p data-consultation-status role="status" aria-live="polite">${text(ui.consultationStatus)} <a href="${escapeAttribute(`${href(outputPath, "index.html")}#contact`)}" data-state-recovery data-measure-action="consultation-action" data-content-type="service" data-content-id="${escapeAttribute(article.relatedService)}">${text(ui.requestQuote)}</a></p>` : "";
+  const mainHtml = `${renderBreadcrumbs({ locale, outputPath, items: [{ label: ui.home, outputPath: blogRoute({ locale, kind: "home" }) }, { label: category.name, outputPath: blogRoute({ locale, kind: "category", slug: category.slug }) }, { label: content.title }] })}<article class="shell article-page" data-article-page data-content-id="${escapeAttribute(article.id)}" itemscope itemtype="https://schema.org/Article"><header><p>${text(category.name)} · ${text(dimension(article.level, locale))}</p><h1 id="page-title" itemprop="headline">${text(content.title)}</h1><p itemprop="description">${text(content.summary)}</p>${metadata}${hero}<div class="article-tools"><button type="button" data-copy-link>${text(ui.copyLink)}</button><button type="button" data-print-article>${text(ui.print)}</button><p data-article-tools-status role="status" aria-live="polite"></p></div></header><details data-article-toc open><summary>${text(ui.tableOfContents)}</summary><ol>${toc}</ol></details><div class="article-body" id="article-body" itemprop="articleBody">${anchored.html}</div>${consultationStatus}<section data-article-tags><h2>${text(ui.tags)}</h2><ul>${tags}</ul></section>${article.correctionNote?.[locale] ? `<p data-correction-note>${text(article.correctionNote[locale])}</p>` : ""}${renderSeriesNavigation({ model, article, locale, outputPath })}<section data-related-content><h2>${text(ui.related)}</h2>${cards({ model, locale, outputPath, articles: relatedArticles(model, article, locale) })}</section>${renderNewsletterPanel({ locale })}${comments}</article>`;
   const peer = articleRoute(article, otherLocale(locale)) ?? (locale === "en" ? blogRoute({ locale: "he", kind: "article", slug: content.slug }) : null);
   const canonicalUrl = new URL(outputPath.replace(/index\.html$/u, ""), `${model.settings.siteOrigin}/`).href;
   const authorUrl = new URL(blogRoute({ locale, kind: "author", slug: authorContent.slug }).replace(/index\.html$/u, ""), `${model.settings.siteOrigin}/`).href;
@@ -432,6 +443,19 @@ export function renderSiteSearchFallbackPage({ model, template, locale, outputPa
 
 export function renderMissingTranslationPage({ model, template, article, outputPath }) {
   const locale = "he"; const ui = copy.he; const englishRoute = articleRoute(article, "en");
-  const mainHtml = `<section class="shell" data-missing-translation><h1 id="page-title">${text(ui.unavailable)}</h1><p>${text(ui.unavailable)}</p><p><a href="${escapeAttribute(href(outputPath, englishRoute))}">${text(ui.availableEnglish)}</a></p><p><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "home" })))}">${text(ui.backToBlog)}</a></p></section>`;
+  const mainHtml = `<section class="shell" data-missing-translation data-system-state="missing-translation" role="status" aria-live="polite"><h1 id="page-title">${text(ui.unavailable)}</h1><p>${text(ui.unavailable)}</p><p><a href="${escapeAttribute(href(outputPath, englishRoute))}" data-state-recovery>${text(ui.availableEnglish)}</a></p><p><a href="${escapeAttribute(href(outputPath, blogRoute({ locale, kind: "home" })))}">${text(ui.backToBlog)}</a></p></section>`;
   return documentPage({ model, template, locale, outputPath, alternateOutputPath: englishRoute, title: ui.unavailable, description: ui.unavailable, mainHtml, robots: "noindex, follow" });
+}
+
+export function renderSystemStatePage({ model, template, locale, kind }) {
+  const ui = copy[locale];
+  const withdrawn = kind === "withdrawn-content";
+  const outputPath = `${locale === "he" ? "he/" : ""}blog/${withdrawn ? "content-unavailable" : "preview-unavailable"}/index.html`;
+  const alternateOutputPath = `${locale === "en" ? "he/" : ""}blog/${withdrawn ? "content-unavailable" : "preview-unavailable"}/index.html`;
+  const title = withdrawn ? ui.withdrawnTitle : ui.previewTitle;
+  const body = withdrawn ? ui.withdrawnBody : ui.previewBody;
+  const action = withdrawn ? ui.withdrawnAction : ui.previewAction;
+  const recovery = withdrawn ? blogRoute({ locale, kind: "home" }) : "index.html#contact";
+  const mainHtml = `<section class="shell" data-system-state="${kind}" role="alert" aria-live="assertive"><h1 id="page-title">${text(title)}</h1><p>${text(body)}</p><p><a href="${escapeAttribute(href(outputPath, recovery))}" data-state-recovery>${text(action)}</a></p></section>`;
+  return documentPage({ model, template, locale, outputPath, alternateOutputPath, title, description: body, mainHtml, robots: "noindex, follow" });
 }

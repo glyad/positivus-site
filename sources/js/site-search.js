@@ -4,15 +4,16 @@ import {
   siteSearchRecoveryGuidance,
   shouldInterceptSiteSearchSubmit
 } from "./site-search-core.mjs";
+import { dispatchInteraction } from "./measurement.mjs";
 
 const copy = {
   en: {
-    curated: "Popular resources",
     resultCount: (count) => `${count} result${count === 1 ? "" : "s"}`,
+    loading: "Loading search…", useSearchPage: "Use the search page", curated: "Popular resources",
     types: { page: "Pages", service: "Services", "case-study": "Case studies", article: "Articles", author: "Authors" }
   },
   he: {
-    curated: "משאבים מומלצים",
+    curated: "משאבים מומלצים", loading: "החיפוש נטען…", useSearchPage: "מעבר לדף החיפוש",
     resultCount: (count) => `${count} תוצאות`,
     types: { page: "עמודים", service: "שירותים", "case-study": "מקרי בוחן", article: "מאמרים", author: "כותבים" }
   }
@@ -34,6 +35,7 @@ if (dialog && input && resultsRegion && status && triggers.length) {
   const canEnhance = typeof dialog.showModal === "function" && typeof fetch === "function";
   const text = () => copy[locale];
   const searchForm = input.form;
+  const measure = (action, contentType = "site-search", contentId = "site-search") => dispatchInteraction(document, { action, locale, contentType, contentId });
 
   function currentIndexUrl() {
     return new URL(dialog.dataset.siteSearchIndex, document.baseURI).href;
@@ -69,6 +71,15 @@ if (dialog && input && resultsRegion && status && triggers.length) {
     resultsRegion.append(actions);
   }
 
+  function renderLoading() {
+    clearResults();
+    status.textContent = text().loading;
+    const link = document.createElement("a");
+    link.href = recoveryRoutes().fallback;
+    link.textContent = text().useSearchPage;
+    resultsRegion.append(link);
+  }
+
   function createLink(result) {
     const link = document.createElement("a");
     link.href = new URL(result.href ?? "", indexUrl ?? document.baseURI).href;
@@ -77,6 +88,7 @@ if (dialog && input && resultsRegion && status && triggers.length) {
     const summary = document.createElement("span");
     summary.textContent = result.summary ?? "";
     link.append(title, summary);
+    link.addEventListener("click", () => measure("result-select", result.type ?? "page", result.id ?? "site-search-result"));
     return link;
   }
 
@@ -121,8 +133,7 @@ if (dialog && input && resultsRegion && status && triggers.length) {
   async function openSearch(openingTrigger) {
     trigger = openingTrigger;
     dialog.showModal();
-    status.textContent = "";
-    clearResults();
+    renderLoading();
     input.focus();
     try {
       await loadIndex();
@@ -168,6 +179,7 @@ if (dialog && input && resultsRegion && status && triggers.length) {
   });
 
   searchForm?.addEventListener("submit", (event) => {
+    measure("global-search-submit");
     if (!shouldInterceptSiteSearchSubmit({ canEnhance, indexLoaded: Array.isArray(documents) })) return;
     event.preventDefault();
     renderResults(input.value);

@@ -259,6 +259,67 @@ test("article pages render progressive article tools and the in-memory comment d
   assert.match(html, /textarea[^>]*minlength="2"[^>]*maxlength="2000"/);
 });
 
+test("renders announced, recoverable Blog states for content, search, media, conversions, and comments", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-states-"));
+  const pages = await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+  assert.ok(pages.includes("blog/content-unavailable/index.html"));
+  assert.ok(pages.includes("blog/preview-unavailable/index.html"));
+  const [browse, article, consultation, missing, withdrawn, preview] = await Promise.all([
+    readFile(resolve(outputDir, "blog/search/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/seo-audit-90-minutes/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/paid-media-budget/index.html"), "utf8"),
+    readFile(resolve(outputDir, "he/blog/analytics-attribution-models/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/content-unavailable/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/preview-unavailable/index.html"), "utf8")
+  ]);
+
+  assert.match(browse, /data-blog-runtime-status[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-state-recovery/);
+  assert.match(article, /data-image-fallback[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-state-recovery/);
+  assert.match(article, /data-newsletter-status[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-newsletter-retry[^>]*data-state-recovery/);
+  assert.match(article, /data-demo-comment-signed-out[^>]*data-system-state="signed-out-comment"[\s\S]*data-state-recovery/);
+  assert.match(article, /data-demo-comment-status[^>]*aria-live="polite"/);
+  assert.match(article, /data-comment-session-reset[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-state-recovery/);
+  assert.match(consultation, /data-consultation-status[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-state-recovery/);
+  assert.match(missing, /data-system-state="missing-translation"[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-state-recovery/);
+  assert.match(withdrawn, /data-system-state="withdrawn-content"[^>]*role="alert"[^>]*aria-live="assertive"[\s\S]*data-state-recovery/);
+  assert.match(preview, /data-system-state="invalid-preview"[^>]*role="alert"[^>]*aria-live="assertive"[\s\S]*data-state-recovery/);
+});
+
+test("measurement details expose only non-personal action, locale, content type, and content ID", async () => {
+  let measurement;
+  try {
+    measurement = await import("../sources/js/measurement.mjs");
+  } catch {
+    measurement = null;
+  }
+  assert.equal(typeof measurement?.createInteractionDetail, "function");
+  const detail = measurement.createInteractionDetail({
+    action: "blog-search-submit",
+    locale: "en",
+    contentType: "blog",
+    contentId: "blog-index",
+    query: "private search",
+    email: "reader@example.com",
+    comment: "private comment"
+  });
+
+  assert.deepEqual(detail, {
+    action: "blog-search-submit",
+    locale: "en",
+    contentType: "blog",
+    contentId: "blog-index"
+  });
+  assert.throws(() => measurement.createInteractionDetail({ action: "search", locale: "en", contentType: "blog", contentId: "reader@example.com" }), /contentId/);
+
+  const target = new EventTarget();
+  let observed;
+  target.addEventListener("positivus:interaction", (event) => { observed = event.detail; });
+  assert.equal(typeof measurement.dispatchInteraction, "function");
+  assert.equal(measurement.dispatchInteraction(target, { ...detail, query: "private", email: "reader@example.com", comment: "private" }), true);
+  assert.deepEqual(observed, detail);
+});
+
 test("browse starts with twelve stable cards and accessible numbered pagination", async () => {
   const model = await loadRepositoryBlogModel();
   const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-browse-"));

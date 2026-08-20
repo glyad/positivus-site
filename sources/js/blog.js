@@ -9,6 +9,7 @@ import {
   shouldApplyDesktopFilterChange,
   sortBlogDocuments
 } from "./blog-core.mjs";
+import { dispatchInteraction } from "./measurement.mjs";
 
 const FACETS = ["category", "format", "audience", "level", "author", "duration"];
 
@@ -18,8 +19,12 @@ function locale() {
 
 function blogCopy() {
   return locale() === "he"
-    ? { results: "תוצאות", page: "עמוד", previous: "הקודם", next: "הבא", by: "מאת", noResults: "לא נמצאו תוצאות", filters: "מסננים פעילים", copySucceeded: "הקישור הועתק.", copyFailed: "לא הצלחנו להעתיק את הקישור.", commentAdded: "תגובת הדגמה נוספה למפגש הנוכחי בעמוד.", commentTooShort: "כתבו לפחות 2 תווים.", commentTooLong: "כתבו עד 2000 תווים." }
-    : { results: "results", page: "Page", previous: "Previous", next: "Next", by: "By", noResults: "No results", filters: "Active filters", copySucceeded: "Link copied.", copyFailed: "Could not copy the link.", commentAdded: "Demo comment added for this page session.", commentTooShort: "Write at least 2 characters.", commentTooLong: "Write no more than 2000 characters." };
+    ? { results: "תוצאות", page: "עמוד", previous: "הקודם", next: "הבא", by: "מאת", noResults: "לא נמצאו תוצאות", filters: "מסננים פעילים", copySucceeded: "הקישור הועתק.", copyFailed: "לא הצלחנו להעתיק את הקישור.", commentAdded: "תגובת הדגמה נוספה למפגש הנוכחי בעמוד.", commentTooShort: "כתבו לפחות 2 תווים.", commentTooLong: "כתבו עד 2000 תווים.", commentSubmitting: "תגובת ההדגמה מתווספת למפגש הזה.", loadingResults: "אינדקס הבלוג נטען.", emptyQuery: "אין שאילתת חיפוש. כל התובנות מוצגות.", populatedResults: "תוצאות הבלוג עודכנו.", indexUnavailable: "אינדקס הבלוג אינו זמין. המאמרים שנטענו בשרת נשארים זמינים.", browseResults: "עיון בתוצאות הנוכחיות", newsletterSuccess: "הדגמת ההרשמה הושלמה. כתובת האימייל לא נשלחה ולא נשמרה.", newsletterFailure: "הזינו כתובת אימייל תקפה כדי לנסות שוב." }
+    : { results: "results", page: "Page", previous: "Previous", next: "Next", by: "By", noResults: "No results", filters: "Active filters", copySucceeded: "Link copied.", copyFailed: "Could not copy the link.", commentAdded: "Demo comment added for this page session.", commentTooShort: "Write at least 2 characters.", commentTooLong: "Write no more than 2000 characters.", commentSubmitting: "Adding the demo comment to this page session.", loadingResults: "Loading the Blog index.", emptyQuery: "No search query. Showing all insights.", populatedResults: "Blog results updated.", indexUnavailable: "The Blog index is unavailable. The server-rendered articles remain available.", browseResults: "Browse the current results", newsletterSuccess: "Prototype signup complete. The email address was not sent or stored.", newsletterFailure: "Enter a valid email address to try again." };
+}
+
+function measure(action, contentType, contentId) {
+  dispatchInteraction(document, { action, locale: locale(), contentType, contentId });
 }
 
 function selectedValues(control) {
@@ -84,10 +89,14 @@ function articleCard(root, article) {
   const card = document.createElement("article");
   card.className = "blog-card";
   card.dataset.articleCard = "";
+  card.dataset.contentId = article.id;
   const heading = document.createElement("h3");
   const link = document.createElement("a");
   link.href = articleHref(root, article.href);
   link.textContent = article.title;
+  link.dataset.measureAction = "result-select";
+  link.dataset.contentType = "article";
+  link.dataset.contentId = article.id;
   heading.append(link);
   const summary = document.createElement("p");
   summary.textContent = article.summary;
@@ -113,6 +122,7 @@ function renderChips(root, state, update) {
       button.type = "button";
       button.textContent = `× ${value}`;
       button.addEventListener("click", () => {
+        measure("filter-clear", "blog", "blog-index");
         const next = structuredClone(state);
         next[key] = Array.isArray(next[key]) ? next[key].filter((entry) => entry !== value) : "";
         next.page = 1;
@@ -148,9 +158,21 @@ function initBrowse(root) {
   const heading = root.querySelector("[data-results-heading]");
   const drawer = root.querySelector("[data-filter-drawer]");
   const toggle = root.querySelector("[data-filter-toggle]");
+  const runtimeStatus = root.querySelector("[data-blog-runtime-status]");
   let openingControl = null;
   let documents = [];
   let state;
+
+  const setRuntimeStatus = (message) => {
+    if (!runtimeStatus) return;
+    const link = document.createElement("a");
+    link.href = "#blog-results";
+    link.dataset.stateRecovery = "";
+    link.textContent = blogCopy().browseResults;
+    runtimeStatus.replaceChildren(message, " ", link);
+    runtimeStatus.hidden = false;
+  };
+  setRuntimeStatus(blogCopy().loadingResults);
 
   const closeDrawer = ({ restore = true } = {}) => {
     if (!drawer) return;
@@ -183,11 +205,13 @@ function initBrowse(root) {
         clear.type = "button";
         clear.dataset.clearBlogFilters = "";
         clear.textContent = recovery.action;
-        clear.addEventListener("click", () => update(parseBlogSearchState("", documents), { moveFocus: true }));
+        clear.addEventListener("click", () => { measure("filter-clear", "blog", "blog-index"); update(parseBlogSearchState("", documents), { moveFocus: true }); });
         grid.replaceChildren(message, clear);
       }
     }
     if (count) count.textContent = `${page.total} ${blogCopy().results}`;
+    const hasFilters = state.categories.length || state.formats.length || state.audiences.length || state.levels.length || state.authors.length || state.duration.length || state.from || state.to;
+    setRuntimeStatus(!state.query && !hasFilters ? blogCopy().emptyQuery : blogCopy().populatedResults);
     renderChips(root, state, update);
     renderPagination(root, page, update);
     if (moveFocus) heading?.focus();
@@ -209,12 +233,12 @@ function initBrowse(root) {
       for (const control of root.querySelector("[data-filter-panel]")?.querySelectorAll("select, input") ?? []) {
         const facet = [...FACETS, "from", "to"].find((name) => control.hasAttribute(`data-filter-${name}`));
         control.addEventListener("change", (event) => {
-          if (shouldApplyDesktopFilterChange({ type: event.type, facet })) update(stateFromControls(root, documents, state));
+          if (shouldApplyDesktopFilterChange({ type: event.type, facet })) { measure("filter-apply", "blog", "blog-index"); update(stateFromControls(root, documents, state)); }
         });
       }
       toggle?.addEventListener("click", openDrawer);
-      drawer?.querySelector("[data-filter-apply]")?.addEventListener("click", () => { closeDrawer({ restore: false }); update(stateFromControls(root, documents, state, drawer), { moveFocus: true }); });
-      drawer?.querySelector("[data-filter-clear]")?.addEventListener("click", () => update(parseBlogSearchState("", documents)));
+      drawer?.querySelector("[data-filter-apply]")?.addEventListener("click", () => { measure("filter-apply", "blog", "blog-index"); closeDrawer({ restore: false }); update(stateFromControls(root, documents, state, drawer), { moveFocus: true }); });
+      drawer?.querySelector("[data-filter-clear]")?.addEventListener("click", () => { measure("filter-clear", "blog", "blog-index"); closeDrawer({ restore: false }); update(parseBlogSearchState("", documents), { moveFocus: true }); });
       drawer?.addEventListener("keydown", (event) => {
         const controls = [...drawer.querySelectorAll("a[href], button:not([disabled]), input:not([disabled]), select:not([disabled])")];
         const action = drawerFocusAction({ key: event.key, index: controls.indexOf(document.activeElement), count: controls.length, shiftKey: event.shiftKey });
@@ -222,7 +246,7 @@ function initBrowse(root) {
         if (action === "first" || action === "last") { event.preventDefault(); controls[action === "first" ? 0 : controls.length - 1]?.focus(); }
       });
     })
-    .catch(() => { /* Leave the complete server-rendered browse page available. */ });
+    .catch(() => { setRuntimeStatus(blogCopy().indexUnavailable); });
 }
 
 function initTagClouds() {
@@ -275,8 +299,10 @@ function copyWithSelectionFallback(value) {
 
 function initArticleTools() {
   const status = document.querySelector("[data-article-tools-status]");
+  const articleId = document.querySelector("[data-article-page]")?.dataset.contentId ?? "blog-article";
   const announce = (message) => { if (status) status.textContent = message; };
   document.querySelector("[data-copy-link]")?.addEventListener("click", async () => {
+    measure("copy-link", "article", articleId);
     const value = canonicalArticleUrl();
     try {
       if (navigator.clipboard?.writeText) await navigator.clipboard.writeText(value);
@@ -291,7 +317,57 @@ function initArticleTools() {
       }
     }
   });
-  document.querySelector("[data-print-article]")?.addEventListener("click", () => window.print());
+  document.querySelector("[data-print-article]")?.addEventListener("click", () => { measure("print-article", "article", articleId); window.print(); });
+}
+
+function initImageFallbacks() {
+  for (const image of document.querySelectorAll("[data-article-image]")) {
+    image.addEventListener("error", () => {
+      image.hidden = true;
+      const fallback = image.closest("figure")?.querySelector("[data-image-fallback]");
+      if (fallback) fallback.hidden = false;
+    }, { once: true });
+  }
+}
+
+function initNewsletterForms() {
+  for (const form of document.querySelectorAll("[data-newsletter-form]")) {
+    const panel = form.closest(".blog-newsletter");
+    const status = panel?.querySelector("[data-newsletter-status]");
+    const retry = panel?.querySelector("[data-newsletter-retry]");
+    const email = form.elements.email;
+    const announce = (message, assertive = false) => {
+      if (!status) return;
+      status.setAttribute("role", assertive ? "alert" : "status");
+      status.setAttribute("aria-live", assertive ? "assertive" : "polite");
+      status.textContent = message;
+      if (retry) retry.hidden = false;
+    };
+    form.addEventListener("invalid", () => announce(blogCopy().newsletterFailure, true), true);
+    form.addEventListener("submit", (event) => {
+      event.preventDefault();
+      measure("newsletter-submit", "newsletter", "blog-newsletter");
+      if (!form.checkValidity()) { announce(blogCopy().newsletterFailure, true); return; }
+      announce(blogCopy().newsletterSuccess);
+      form.reset();
+    });
+    retry?.addEventListener("click", () => { retry.hidden = true; if (status) status.textContent = ""; email?.focus(); });
+  }
+}
+
+function initMeasuredNavigation() {
+  document.addEventListener("submit", (event) => {
+    if (event.target.matches?.("[data-blog-search-form]")) measure("blog-search-submit", "blog", "blog-index");
+  });
+  document.addEventListener("click", (event) => {
+    const target = event.target.closest?.("[data-measure-action]");
+    if (target) measure(target.dataset.measureAction, target.dataset.contentType, target.dataset.contentId);
+    const consultation = event.target.closest?.("[data-consultation-service] a");
+    if (consultation) {
+      const section = consultation.closest("[data-consultation-service]");
+      measure("consultation-action", "service", section.dataset.consultationService);
+    }
+  });
 }
 
 function initArticleToc() {
@@ -355,24 +431,35 @@ function initDemoComments() {
     const form = root.querySelector("[data-demo-comment-form]");
     const list = root.querySelector("[data-demo-comment-list]");
     const status = root.querySelector("[data-demo-comment-status]");
+    const sessionReset = root.querySelector("[data-comment-session-reset]");
+    const write = root.querySelector("[data-comment-write]");
     root.dataset.demoCommentState = state;
     if (signedOut) signedOut.hidden = state === "signed-in";
     if (form) form.hidden = state !== "signed-in";
+    if (sessionReset) sessionReset.hidden = state !== "signed-in";
     if (state !== "signed-in" || !form || !list) continue;
+    const textarea = form.elements.comment;
+    const submit = form.querySelector('[type="submit"]');
+    write?.addEventListener("click", () => textarea?.focus());
     form.addEventListener("submit", (event) => {
       event.preventDefault();
-      const textarea = form.elements.comment;
       try {
         const comment = createDemoComment(textarea?.value);
-        demoComments.push(comment);
-        const item = document.createElement("li");
-        item.dataset.demoCommentId = comment.id;
-        item.textContent = comment.text;
-        list.append(item);
-        textarea.value = "";
-        if (status) status.textContent = blogCopy().commentAdded;
+        if (status) { status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); status.textContent = blogCopy().commentSubmitting; }
+        if (submit) submit.disabled = true;
+        setTimeout(() => {
+          demoComments.push(comment);
+          const item = document.createElement("li");
+          item.dataset.demoCommentId = comment.id;
+          item.textContent = comment.text;
+          list.append(item);
+          textarea.value = "";
+          if (submit) submit.disabled = false;
+          if (status) status.textContent = blogCopy().commentAdded;
+        }, 200);
       } catch (error) {
-        if (status) status.textContent = /no more than 2000/u.test(String(error?.message)) ? blogCopy().commentTooLong : blogCopy().commentTooShort;
+        if (status) { status.setAttribute("role", "alert"); status.setAttribute("aria-live", "assertive"); status.textContent = /no more than 2000/u.test(String(error?.message)) ? blogCopy().commentTooLong : blogCopy().commentTooShort; }
+        textarea?.focus();
       }
     });
   }
@@ -382,6 +469,9 @@ for (const root of document.querySelectorAll("[data-blog-browse]")) initBrowse(r
 initTagClouds();
 initAuthorDirectory();
 initArticleTools();
+initImageFallbacks();
+initNewsletterForms();
+initMeasuredNavigation();
 initArticleToc();
 initBlogNavigation();
 initDemoComments();

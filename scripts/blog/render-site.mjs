@@ -11,6 +11,7 @@ import {
   renderCategoryPage,
   renderMissingTranslationPage,
   renderSiteSearchFallbackPage,
+  renderSystemStatePage,
   renderSeriesPage,
   renderTagIndexPage,
   renderTagPage
@@ -28,6 +29,8 @@ function emitPages(model, template, version) {
   for (const locale of LOCALES) {
     pages.push(renderSiteSearchFallbackPage({ model, template, locale }));
     pages.push(renderBlogHome({ model, template, locale, version }));
+    pages.push(renderSystemStatePage({ model, template, locale, kind: "withdrawn-content" }));
+    pages.push(renderSystemStatePage({ model, template, locale, kind: "invalid-preview" }));
     const browsePages = Math.max(1, Math.ceil((model.publicArticles ?? []).filter((article) => localized(article, locale)).length / 12));
     const peerBrowsePages = Math.max(1, Math.ceil((model.publicArticles ?? []).filter((article) => localized(article, locale === "en" ? "he" : "en")).length / 12));
     for (let page = 1; page <= browsePages; page += 1) {

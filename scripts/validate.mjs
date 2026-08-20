@@ -2,7 +2,9 @@ import { readdir, readFile } from "node:fs/promises";
 import { dirname, extname, relative, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 
-import { repositoryRoot } from "./build.mjs";
+import { buildSite, repositoryRoot } from "./build.mjs";
+import { validateGeneratedSite } from "./generated-site-guards.mjs";
+import { formatContentValidationError, validateRepositoryBlogContent } from "./validate-content.mjs";
 import { authNavigation, authPages, authText } from "../sources/js/auth-content.mjs";
 
 const failures = [];
@@ -235,6 +237,20 @@ for (const requiredFile of [
   } catch {
     failures.push(`repository: missing ${requiredFile}`);
   }
+}
+
+try {
+  await validateRepositoryBlogContent({ sourceDir });
+} catch (error) {
+  failures.push(formatContentValidationError(error));
+}
+
+try {
+  const outputDir = await buildSite();
+  const manifest = JSON.parse(await readFile(resolve(outputDir, "manifest.json"), "utf8"));
+  failures.push(...await validateGeneratedSite({ outputDir, entrypoints: manifest.entrypoints }));
+} catch (error) {
+  failures.push(`generated site: ${error.message}`);
 }
 
 if (failures.length) {
