@@ -209,6 +209,21 @@ test("Blog shell keeps closed search hidden and renders compact navigation and T
   assert.match(blogStyles, /\.article-block--faq summary\s*\{[\s\S]*min-block-size:\s*44px/);
 });
 
+test("signed-out Blog comments keep the demo form visually hidden", async () => {
+  const outputDir = await buildSite();
+  const [articleHtml, blogStyles] = await Promise.all([
+    readFile(resolve(outputDir, "blog/sustainable-demand-system/index.html"), "utf8"),
+    readFile(resolve(outputDir, "css/blog.css"), "utf8")
+  ]);
+
+  assert.match(articleHtml, /<form data-demo-comment-form hidden>/);
+  assert.match(
+    blogStyles,
+    /\[data-demo-comment-form\]\[hidden\]\s*\{\s*display:\s*none/,
+    "the authored form layout must not override the hidden signed-out state"
+  );
+});
+
 test("build manifest tracks the package version", async () => {
   await buildSite();
   const manifest = JSON.parse(

@@ -2,7 +2,7 @@
 
 A dependency-free HTML, SCSS/CSS, and vanilla JavaScript recreation of Olga Averchenko's [Positivus Landing Page Design](https://www.figma.com/community/file/1230604708032389430/positivus-landing-page-design).
 
-The site supports English LTR and automatically translated Hebrew RTL layouts. It includes responsive navigation, service cards, an accordion, team reveal, testimonial carousel, validated contact and newsletter forms, persistent language selection, and a complete prototype authentication journey with no real accounts or stored personal data.
+The site supports English LTR and automatically translated Hebrew RTL layouts. It includes responsive navigation, service cards, an accordion, team reveal, testimonial carousel, validated contact and newsletter forms, persistent language selection, a complete prototype authentication journey, and a CMS-neutral bilingual Blog/Knowledge Hub. Authentication and Blog comments are UI-only demonstrations with no real accounts or stored personal data.
 
 ## Requirements
 
@@ -31,6 +31,7 @@ Open `http://127.0.0.1:4173/`. The development command builds the site into `dis
 | `npm run preview` | Build once and serve without watching. |
 | `npm run format:check` | Check line endings, final newlines, and trailing whitespace. |
 | `npm run lint` | Validate JavaScript syntax, local references, source guards, and repository files. |
+| `npm run content:check` | Validate Blog records, localized fields, relationships, publishing states, blocks, links, and media metadata. |
 | `npm test` | Run the Node test suite. |
 | `npm run check` | Run all required pull-request checks and build the site. |
 | `npm run package` | Build a release tarball and SHA-256 checksum in `artifacts/`. |
@@ -55,6 +56,29 @@ AGENTS.md              Codex repository guidance
 ```
 
 `sources/scss/main.scss` is deliberately CSS-compatible. The zero-dependency build copies it deterministically to `dist/css/main.css`, avoiding a Sass runtime while keeping a familiar source layout.
+
+## Blog routes and content workflow
+
+The build generates equivalent English and Hebrew route families. English routes start at `/blog/`; Hebrew routes start at `/he/blog/` and use localized article, tag, and series slugs where the content supplies them.
+
+| Family | English example | Hebrew example |
+| --- | --- | --- |
+| Blog home | `/blog/` | `/he/blog/` |
+| Browse and pagination | `/blog/search/`, `/blog/search/page/2/` | `/he/blog/search/`, `/he/blog/search/page/2/` |
+| Category and tag | `/blog/category/seo/`, `/blog/tag/measurement/` | `/he/blog/category/seo/`, `/he/blog/tag/medida/` |
+| Series | `/blog/series/growth-foundations/` | `/he/blog/series/yesodot-hatzmicha/` |
+| Authors | `/blog/authors/`, `/blog/authors/maya-chen/` | `/he/blog/authors/`, `/he/blog/authors/maya-chen/` |
+| Article | `/blog/sustainable-demand-system/` | `/he/blog/maarechet-bikush-bat-kayma/` |
+| Global search fallback | `/search/` | `/he/search/` |
+
+Repository fixtures under `sources/content/blog/` implement the same raw contract expected from a future CMS adapter. To edit or add content:
+
+1. Update settings, categories, tags, authors, series, or article JSON without changing stable record IDs.
+2. Add both locale variants where required; localized slugs may differ while IDs and relationships remain shared.
+3. Run `npm run content:check` to receive grouped record/locale/field errors.
+4. Run `npm run build` or `npm run preview` to regenerate static routes, search indexes, feeds, sitemaps, structured metadata, and the manifest.
+
+A hosted CMS integration replaces only `scripts/blog/local-json-adapter.mjs` with a provider adapter that returns the same CMS-neutral object. Publishing webhooks should trigger the repository build workflow; validation or rendering failures must stop that deployment so the last successful static release remains live. CMS credentials stay in the build environment and are never emitted to the browser.
 
 ## Branching and releases
 
