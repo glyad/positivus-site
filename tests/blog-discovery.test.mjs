@@ -65,6 +65,32 @@ test("rejects unsafe or incompatible search records before build and runtime use
   );
 });
 
+test("rejects off-taxonomy or incoherent Blog metadata before replacing server results", async () => {
+  const model = await loadRepositoryBlogModel();
+  const valid = createBlogSearchIndex({ model, locale: "en" });
+  const mutations = [
+    ["level", (record) => { record.level = "expert"; }],
+    ["format", (record) => { record.format = "whitepaper"; }],
+    ["audiences", (record) => { record.audiences = ["leaders", "buyers"]; }],
+    ["audiences", (record) => { record.audiences = ["leaders", "leaders"]; }],
+    ["tags", (record) => { record.tags = [record.tags[0], record.tags[0]]; }],
+    ["authors", (record) => { record.authors = [record.primaryAuthor.id, "maya-chen"]; }],
+    ["coAuthors", (record) => {
+      record.coAuthors = [{ ...record.primaryAuthor }];
+      record.authors = [record.primaryAuthor.id];
+    }]
+  ];
+
+  for (const [field, mutate] of mutations) {
+    const payload = structuredClone(valid);
+    mutate(payload.records[0]);
+    assert.throws(
+      () => validateSearchIndexEnvelope(payload, { kind: "blog-search", locale: "en" }),
+      new RegExp(field)
+    );
+  }
+});
+
 test("rejects shape-safe search records that do not resolve to an emitted public route", async () => {
   const model = await loadRepositoryBlogModel();
   const siteDocuments = await loadRepositorySiteDocuments();

@@ -1,6 +1,7 @@
 import {
   commentDemoState,
   blogSearchParams,
+  blogSearchHref,
   createDemoComment,
   drawerFocusAction,
   filterBlogDocuments,
@@ -154,7 +155,7 @@ function renderPagination(root, page, state, update) {
   for (let number = 1; number <= page.pageCount; number += 1) {
     const item = document.createElement("li");
     const link = document.createElement("a");
-    link.href = `?${blogSearchParams({ ...state, page: number }).toString()}`;
+    link.href = blogSearchHref(root.dataset.blogBrowseRoute || location.pathname, { ...state, page: number }, document.baseURI);
     link.textContent = String(number);
     if (number === page.page) link.setAttribute("aria-current", "page");
     link.addEventListener("click", (event) => { event.preventDefault(); update({ page: number }); });
@@ -206,8 +207,7 @@ function initBrowse(root) {
     const visible = sortBlogDocuments(filterBlogDocuments(documents, state), state);
     const page = paginate(visible, state.page);
     state.page = page.page;
-    const query = queryFromState(state).toString();
-    history.replaceState(null, "", `${location.pathname}${query ? `?${query}` : ""}`);
+    history.replaceState(null, "", blogSearchHref(root.dataset.blogBrowseRoute || location.pathname, state, document.baseURI));
     applyStateToControls(root, state);
     if (grid) {
       if (page.total) grid.replaceChildren(...page.items.map((article) => articleCard(root, article)));
@@ -238,8 +238,8 @@ function initBrowse(root) {
     })
     .then((payload) => {
       documents = validateSearchIndexEnvelope(payload, { kind: "blog-search", locale: locale() });
-      state = parseBlogSearchState(location.search, documents);
-      state.page = Math.max(1, Number.parseInt(root.dataset.blogStaticPage ?? "", 10) || state.page);
+      const staticPage = Math.max(1, Number.parseInt(root.dataset.blogStaticPage ?? "", 10) || 1);
+      state = parseBlogSearchState(location.search, documents, { defaultPage: staticPage });
       update();
       root.querySelector("[data-blog-search-form]")?.addEventListener("submit", (event) => { event.preventDefault(); update(stateFromControls(root, documents, state), { moveFocus: true }); });
       root.querySelector("[data-blog-sort]")?.addEventListener("change", () => update(stateFromControls(root, documents, state)));

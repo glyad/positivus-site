@@ -33,7 +33,11 @@ function assertNoJsSafePrototypeForms(html, label) {
 
 test("generated blog pages expose required accessibility and state hooks", async () => {
   await buildSite();
-  const article = await readFile(resolve(repositoryRoot, "dist/blog/seo-audit-90-minutes/index.html"), "utf8");
+  const [article, pageTwo, hebrewPageTwo] = await Promise.all([
+    readFile(resolve(repositoryRoot, "dist/blog/seo-audit-90-minutes/index.html"), "utf8"),
+    readFile(resolve(repositoryRoot, "dist/blog/search/page/2/index.html"), "utf8"),
+    readFile(resolve(repositoryRoot, "dist/he/blog/search/page/2/index.html"), "utf8")
+  ]);
   for (const fragment of [
     'href="#main-content"',
     "<article",
@@ -42,6 +46,8 @@ test("generated blog pages expose required accessibility and state hooks", async
     "data-copy-link",
     "data-demo-comments"
   ]) assert.match(article, new RegExp(fragment));
+  assert.match(pageTwo, /data-blog-browse-route="\.\.\/\.\.\/index\.html"/u);
+  assert.match(hebrewPageTwo, /data-blog-browse-route="\.\.\/\.\.\/index\.html"/u);
 });
 
 test("content check validates repository fixtures using the caller's command path", async () => {

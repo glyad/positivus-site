@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  blogSearchHref,
   commentDemoState,
   createDemoComment,
   drawerFocusAction,
@@ -25,6 +26,12 @@ test("combines dimensions and defaults to relevance only with a query", () => {
   assert.equal(state.page, 2);
   assert.deepEqual(state.levels, ["intermediate"]);
   assert.deepEqual(state.formats, ["checklist"]);
+});
+
+test("uses the static browse page only when the URL has no explicit page", () => {
+  assert.equal(parseBlogSearchState("", undefined, { defaultPage: 2 }).page, 2);
+  assert.equal(parseBlogSearchState("?page=1", undefined, { defaultPage: 2 }).page, 1);
+  assert.equal(parseBlogSearchState("?page=3", undefined, { defaultPage: 2 }).page, 3);
 });
 
 test("filters every selected dimension with OR inside a dimension and AND across dimensions", () => {
@@ -109,6 +116,18 @@ test("enhanced pagination preserves the full query, filter, date, and sort state
   assert.equal(
     blogSearchParams(state).toString(),
     "q=seo&category=seo&format=checklist&audience=leaders&level=intermediate&author=maya-chen&duration=short&from=2026-08-01&to=2026-08-10&sort=oldest&page=2"
+  );
+});
+
+test("enhanced pagination resolves against the canonical localized browse route", () => {
+  const state = parseBlogSearchState("?category=seo&page=2");
+  assert.equal(
+    blogSearchHref("../../index.html", { ...state, page: 1 }, "https://example.test/positivus-site/blog/search/page/2/index.html"),
+    "https://example.test/positivus-site/blog/search/index.html?category=seo"
+  );
+  assert.equal(
+    blogSearchHref("../../index.html", state, "https://example.test/positivus-site/he/blog/search/page/2/index.html"),
+    "https://example.test/positivus-site/he/blog/search/index.html?category=seo&page=2"
   );
 });
 

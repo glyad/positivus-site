@@ -1,8 +1,10 @@
+import { BLOG_INDEX_DIMENSIONS } from "./search-index-contract.mjs";
+
 const DIMENSIONS = {
   categories: ["strategy-growth", "seo", "paid-media", "content-creative", "social-media", "email-lifecycle", "analytics-optimization"],
-  formats: ["guide", "how-to", "framework", "checklist", "case-analysis", "opinion", "industry-update"],
-  audiences: ["leaders", "practitioners", "specialists"],
-  levels: ["beginner", "intermediate", "advanced"],
+  formats: BLOG_INDEX_DIMENSIONS.formats,
+  audiences: BLOG_INDEX_DIMENSIONS.audiences,
+  levels: BLOG_INDEX_DIMENSIONS.levels,
   duration: ["short", "medium", "long"],
   sort: ["newest", "relevance", "oldest", "updated"]
 };
@@ -53,13 +55,14 @@ function dateBoundary(value, end = false) {
 }
 
 /** Parse shareable blog search state, accepting only governed facet values. */
-export function parseBlogSearchState(search = "", documents) {
+export function parseBlogSearchState(search = "", documents, { defaultPage = 1 } = {}) {
   const params = new URLSearchParams(String(search).replace(/^\?/u, ""));
   const allowed = allowlists(documents);
   const query = params.get("q")?.trim() ?? "";
   const requestedSort = params.get("sort") ?? "";
   const sort = DIMENSIONS.sort.includes(requestedSort) ? requestedSort : query ? "relevance" : "newest";
-  const pageValue = Number.parseInt(params.get("page") ?? "1", 10);
+  const fallbackPage = Number.isSafeInteger(defaultPage) && defaultPage > 0 ? defaultPage : 1;
+  const pageValue = params.has("page") ? Number.parseInt(params.get("page") ?? "", 10) : fallbackPage;
   return {
     query,
     categories: selected(params, "category", allowed.categories),
@@ -87,6 +90,15 @@ export function blogSearchParams(state) {
   if (state.sort !== (state.query ? "relevance" : "newest")) params.set("sort", state.sort);
   if (state.page > 1) params.set("page", String(state.page));
   return params;
+}
+
+/** Resolve governed Blog state against the canonical localized browse route. */
+export function blogSearchHref(route, state, baseUrl) {
+  if (typeof route !== "string" || !route.trim()) throw new TypeError("route must be a non-empty string");
+  const url = new URL(route, baseUrl);
+  url.search = blogSearchParams(state).toString();
+  url.hash = "";
+  return url.href;
 }
 
 /** Select the UI-only discussion view without carrying account or comment data. */

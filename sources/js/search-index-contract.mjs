@@ -1,7 +1,15 @@
 export const SEARCH_INDEX_SCHEMA_VERSION = 1;
+export const BLOG_INDEX_DIMENSIONS = Object.freeze({
+  audiences: Object.freeze(["leaders", "practitioners", "specialists"]),
+  formats: Object.freeze(["guide", "how-to", "framework", "checklist", "case-analysis", "opinion", "industry-update"]),
+  levels: Object.freeze(["beginner", "intermediate", "advanced"])
+});
 
 const KINDS = new Set(["global-search", "blog-search"]);
 const GLOBAL_TYPES = new Set(["page", "service", "case-study", "article", "author"]);
+const BLOG_AUDIENCES = new Set(BLOG_INDEX_DIMENSIONS.audiences);
+const BLOG_FORMATS = new Set(BLOG_INDEX_DIMENSIONS.formats);
+const BLOG_LEVELS = new Set(BLOG_INDEX_DIMENSIONS.levels);
 const ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
 const SAFE_SEGMENT = /^[A-Za-z0-9_-]+$/u;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{3})?Z$/u;
@@ -20,9 +28,14 @@ function requireId(value, field) {
   if (typeof value !== "string" || !ID_PATTERN.test(value)) fail(`${field} must be a kebab-case ID`);
 }
 
-function requireTextArray(value, field, { allowEmpty = true, ids = false } = {}) {
+function requireTextArray(value, field, { allowEmpty = true, ids = false, unique = false } = {}) {
   if (!Array.isArray(value) || (!allowEmpty && value.length === 0)) fail(`${field} must be an array`);
   value.forEach((entry, index) => ids ? requireId(entry, `${field}[${index}]`) : requireText(entry, `${field}[${index}]`));
+  if (unique && new Set(value).size !== value.length) fail(`${field} must not contain duplicates`);
+}
+
+function requireAllowed(value, allowed, field) {
+  if (!allowed.has(value)) fail(`${field} is unsupported`);
 }
 
 function requirePerson(value, field) {
@@ -78,14 +91,25 @@ function validateBlogRecord(record, index, locale) {
   if (record.type !== "article") fail(`${field}.type must be article`);
   requireText(record.content, `${field}.content`);
   requireId(record.category, `${field}.category`);
-  requireTextArray(record.tags, `${field}.tags`, { ids: true });
-  requireTextArray(record.audiences, `${field}.audiences`, { allowEmpty: false, ids: true });
+  requireTextArray(record.tags, `${field}.tags`, { ids: true, unique: true });
+  requireTextArray(record.audiences, `${field}.audiences`, { allowEmpty: false, ids: true, unique: true });
+  record.audiences.forEach((audience) => requireAllowed(audience, BLOG_AUDIENCES, `${field}.audiences`));
   requireId(record.level, `${field}.level`);
+  requireAllowed(record.level, BLOG_LEVELS, `${field}.level`);
   requireId(record.format, `${field}.format`);
-  requireTextArray(record.authors, `${field}.authors`, { allowEmpty: false, ids: true });
+  requireAllowed(record.format, BLOG_FORMATS, `${field}.format`);
+  requireTextArray(record.authors, `${field}.authors`, { allowEmpty: false, ids: true, unique: true });
   requirePerson(record.primaryAuthor, `${field}.primaryAuthor`);
   if (!Array.isArray(record.coAuthors)) fail(`${field}.coAuthors must be an array`);
   record.coAuthors.forEach((person, personIndex) => requirePerson(person, `${field}.coAuthors[${personIndex}]`));
+  const coAuthorIds = record.coAuthors.map((person) => person.id);
+  if (new Set(coAuthorIds).size !== coAuthorIds.length || coAuthorIds.includes(record.primaryAuthor.id)) {
+    fail(`${field}.coAuthors must be unique and exclude the primary author`);
+  }
+  const expectedAuthors = [record.primaryAuthor.id, ...coAuthorIds];
+  if (record.authors.length !== expectedAuthors.length || record.authors.some((author, authorIndex) => author !== expectedAuthors[authorIndex])) {
+    fail(`${field}.authors must match primaryAuthor and coAuthors`);
+  }
   requireText(record.categoryLabel, `${field}.categoryLabel`);
   requireText(record.levelLabel, `${field}.levelLabel`);
   requireText(record.formatLabel, `${field}.formatLabel`);
