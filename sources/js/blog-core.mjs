@@ -221,6 +221,11 @@ export function shouldApplyDesktopFilterChange({ type, facet }) {
   return type === "change" && DESKTOP_FILTER_FACETS.has(facet);
 }
 
+/** Move focus after an interaction has committed a new filtered result set. */
+export function shouldFocusResultsAfterFilter(action) {
+  return action === "chip-clear" || action === "desktop-change";
+}
+
 /** Supply a localized, action-oriented empty-result state without saved search data. */
 export function noResultsRecovery(locale) {
   return locale === "he"

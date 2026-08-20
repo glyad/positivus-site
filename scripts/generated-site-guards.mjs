@@ -21,6 +21,29 @@ function alternateUrls(html) {
   return [...html.matchAll(/<link\b(?=[^>]*\brel="alternate")(?=[^>]*\bhreflang="[^"]+")(?=[^>]*\bhref="([^"]+)")[^>]*>/gu)].map((match) => match[1]);
 }
 
+function elementAttribute(element, name) {
+  const match = element.match(new RegExp(`\\s${name}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`, "iu"));
+  return match?.[1] ?? match?.[2] ?? null;
+}
+
+function isNonLocalRuntimeUrl(value) {
+  return /^(?:[A-Za-z][A-Za-z0-9+.-]*:|\/\/)/u.test(value.trim());
+}
+
+function nonLocalRuntimeFailures(html, entrypoint) {
+  const failures = [];
+  for (const match of html.matchAll(/<script\b[^>]*>/giu)) {
+    const source = elementAttribute(match[0], "src");
+    if (source && isNonLocalRuntimeUrl(source)) failures.push(`${entrypoint}: non-local runtime script ${source}`);
+  }
+  for (const match of html.matchAll(/<link\b[^>]*>/giu)) {
+    const rel = elementAttribute(match[0], "rel")?.toLocaleLowerCase().split(/\s+/u) ?? [];
+    const href = elementAttribute(match[0], "href");
+    if (rel.includes("stylesheet") && href && isNonLocalRuntimeUrl(href)) failures.push(`${entrypoint}: non-local runtime stylesheet ${href}`);
+  }
+  return failures;
+}
+
 /** Inspect emitted documents through their observable filesystem and link contracts. */
 export async function validateGeneratedSite({ outputDir, entrypoints }) {
   const failures = [];
@@ -68,9 +91,7 @@ export async function validateGeneratedSite({ outputDir, entrypoints }) {
       }
     }
 
-    if (/(?:href|src)="https?:\/\/[^"]+\.(?:css|js)(?:[?#][^"]*)?"/u.test(html)) {
-      failures.push(`${entrypoint}: third-party runtime CSS or JavaScript detected`);
-    }
+    failures.push(...nonLocalRuntimeFailures(html, entrypoint));
     for (const sentinel of new Set(html.match(/%%[A-Z0-9_]+%%/gu) ?? [])) {
       failures.push(`${entrypoint}: unresolved document sentinel ${sentinel}`);
     }

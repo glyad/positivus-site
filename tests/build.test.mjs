@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, stat, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { delimiter, resolve } from "node:path";
 import test from "node:test";
 
 import { buildSite, repositoryRoot } from "../scripts/build.mjs";
@@ -20,15 +20,33 @@ test("generated blog pages expose required accessibility and state hooks", async
   ]) assert.match(article, new RegExp(fragment));
 });
 
-test("content check validates the repository fixtures through its public command", () => {
-  const result = spawnSync("npm", ["run", "content:check"], {
-    cwd: repositoryRoot,
-    encoding: "utf8",
-    env: { ...process.env, PATH: "/Users/davidkossoglyad/.nvm/versions/node/v26.6.0/bin:/usr/bin:/bin" }
-  });
+test("content check validates repository fixtures using the caller's command path", async () => {
+  const commandDir = await mkdtemp(resolve(tmpdir(), "positivus-command-path-"));
+  const npmPath = resolve(commandDir, "npm");
+  try {
+    await writeFile(npmPath, `#!/bin/sh
+if [ "$1" != "run" ] || [ "$2" != "content:check" ]; then exit 64; fi
+echo "portable npm wrapper used"
+exec "$NODE_BINARY" "$REPOSITORY_ROOT/scripts/validate-content.mjs"
+`);
+    await chmod(npmPath, 0o755);
+    const result = spawnSync("npm", ["run", "content:check"], {
+      cwd: repositoryRoot,
+      encoding: "utf8",
+      env: {
+        ...process.env,
+        NODE_BINARY: process.execPath,
+        REPOSITORY_ROOT: repositoryRoot,
+        PATH: `${commandDir}${delimiter}${process.env.PATH ?? ""}`
+      }
+    });
 
-  assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
-  assert.match(result.stdout, /Blog content validation passed\./);
+    assert.equal(result.status, 0, `${result.stdout}\n${result.stderr}`);
+    assert.match(result.stdout, /portable npm wrapper used/);
+    assert.match(result.stdout, /Blog content validation passed\./);
+  } finally {
+    await rm(commandDir, { recursive: true, force: true });
+  }
 });
 
 test("content failures are grouped by record, locale, and field", async () => {
@@ -66,7 +84,10 @@ test("generated-site guards report broken references, unsupported runtime assets
     await writeFile(resolve(outputDir, "en/index.html"), `<!doctype html><html><head>
       <link rel="canonical" href="https://example.test/en/">
       <link rel="alternate" hreflang="he" href="https://example.test/he/">
-      <script src="https://tracker.invalid/runtime.js"></script>
+      <script src="https://tracker.invalid/runtime"></script>
+      <script src="data:text/javascript,void 0"></script>
+      <link rel="stylesheet" href="https://styles.invalid/runtime">
+      <link rel="stylesheet" href="data:text/css,body{}">
       </head><body><main id="same"><p id="same">%%BROKEN%%</p><span data-content-id="tracking"></span><span data-content-id="tracking"></span><img src="missing.webp"></main></body></html>`);
 
     const failures = await guards.validateGeneratedSite({
@@ -77,7 +98,10 @@ test("generated-site guards report broken references, unsupported runtime assets
       "generated path escapes output: ../escaped.html",
       "en/index.html: duplicate id same",
       "en/index.html: missing local reference missing.webp",
-      "en/index.html: third-party runtime CSS or JavaScript detected",
+      "en/index.html: non-local runtime script https://tracker.invalid/runtime",
+      "en/index.html: non-local runtime script data:text/javascript,void 0",
+      "en/index.html: non-local runtime stylesheet https://styles.invalid/runtime",
+      "en/index.html: non-local runtime stylesheet data:text/css,body{}",
       "en/index.html: unresolved document sentinel %%BROKEN%%",
       "en/index.html: missing reciprocal language peer https://example.test/he/"
     ]);

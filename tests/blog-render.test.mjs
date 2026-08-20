@@ -320,6 +320,37 @@ test("measurement details expose only non-personal action, locale, content type,
   assert.deepEqual(observed, detail);
 });
 
+test("native invalid comment events announce an issue and focus the comment recovery control", async () => {
+  let commentForm;
+  try {
+    commentForm = await import("../sources/js/comment-form.mjs");
+  } catch {
+    commentForm = null;
+  }
+  assert.equal(typeof commentForm?.bindInvalidCommentRecovery, "function");
+
+  const textarea = new EventTarget();
+  textarea.validity = { tooLong: false };
+  let focused = false;
+  textarea.focus = () => { focused = true; };
+  let issue = null;
+  commentForm.bindInvalidCommentRecovery(textarea, (nextIssue) => { issue = nextIssue; });
+
+  const invalid = new Event("invalid", { cancelable: true });
+  textarea.dispatchEvent(invalid);
+  assert.equal(invalid.defaultPrevented, true);
+  assert.equal(issue, "too-short");
+  assert.equal(focused, true);
+});
+
+test("completed chip and desktop filter actions request result-heading focus", async () => {
+  const blogCore = await import("../sources/js/blog-core.mjs");
+  assert.equal(typeof blogCore.shouldFocusResultsAfterFilter, "function");
+  assert.equal(blogCore.shouldFocusResultsAfterFilter("chip-clear"), true);
+  assert.equal(blogCore.shouldFocusResultsAfterFilter("desktop-change"), true);
+  assert.equal(blogCore.shouldFocusResultsAfterFilter("drawer-open"), false);
+});
+
 test("browse starts with twelve stable cards and accessible numbered pagination", async () => {
   const model = await loadRepositoryBlogModel();
   const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-browse-"));

@@ -7,9 +7,11 @@ import {
   paginate,
   parseBlogSearchState,
   shouldApplyDesktopFilterChange,
+  shouldFocusResultsAfterFilter,
   sortBlogDocuments
 } from "./blog-core.mjs";
 import { dispatchInteraction } from "./measurement.mjs";
+import { bindInvalidCommentRecovery } from "./comment-form.mjs";
 
 const FACETS = ["category", "format", "audience", "level", "author", "duration"];
 
@@ -126,7 +128,7 @@ function renderChips(root, state, update) {
         const next = structuredClone(state);
         next[key] = Array.isArray(next[key]) ? next[key].filter((entry) => entry !== value) : "";
         next.page = 1;
-        update(next);
+        update(next, { moveFocus: shouldFocusResultsAfterFilter("chip-clear") });
       });
       region.append(" ", button);
     }
@@ -233,7 +235,7 @@ function initBrowse(root) {
       for (const control of root.querySelector("[data-filter-panel]")?.querySelectorAll("select, input") ?? []) {
         const facet = [...FACETS, "from", "to"].find((name) => control.hasAttribute(`data-filter-${name}`));
         control.addEventListener("change", (event) => {
-          if (shouldApplyDesktopFilterChange({ type: event.type, facet })) { measure("filter-apply", "blog", "blog-index"); update(stateFromControls(root, documents, state)); }
+          if (shouldApplyDesktopFilterChange({ type: event.type, facet })) { measure("filter-apply", "blog", "blog-index"); update(stateFromControls(root, documents, state), { moveFocus: shouldFocusResultsAfterFilter("desktop-change") }); }
         });
       }
       toggle?.addEventListener("click", openDrawer);
@@ -440,6 +442,13 @@ function initDemoComments() {
     if (state !== "signed-in" || !form || !list) continue;
     const textarea = form.elements.comment;
     const submit = form.querySelector('[type="submit"]');
+    const announceInvalid = (issue) => {
+      if (!status) return;
+      status.setAttribute("role", "alert");
+      status.setAttribute("aria-live", "assertive");
+      status.textContent = issue === "too-long" ? blogCopy().commentTooLong : blogCopy().commentTooShort;
+    };
+    bindInvalidCommentRecovery(textarea, announceInvalid);
     write?.addEventListener("click", () => textarea?.focus());
     form.addEventListener("submit", (event) => {
       event.preventDefault();
@@ -458,7 +467,7 @@ function initDemoComments() {
           if (status) status.textContent = blogCopy().commentAdded;
         }, 200);
       } catch (error) {
-        if (status) { status.setAttribute("role", "alert"); status.setAttribute("aria-live", "assertive"); status.textContent = /no more than 2000/u.test(String(error?.message)) ? blogCopy().commentTooLong : blogCopy().commentTooShort; }
+        announceInvalid(/no more than 2000/u.test(String(error?.message)) ? "too-long" : "too-short");
         textarea?.focus();
       }
     });
