@@ -5,6 +5,7 @@ import {
   shouldInterceptSiteSearchSubmit
 } from "./site-search-core.mjs";
 import { dispatchInteraction } from "./measurement.mjs";
+import { validateSearchIndexEnvelope } from "./search-index-contract.mjs";
 
 const copy = {
   en: {
@@ -123,9 +124,8 @@ if (dialog && input && resultsRegion && status && triggers.length) {
     if (documents && indexUrl === nextIndexUrl) return documents;
     const response = await fetch(nextIndexUrl, { headers: { Accept: "application/json" } });
     if (!response.ok) throw new Error(`Could not load search index (${response.status})`);
-    const nextDocuments = await response.json();
-    if (!Array.isArray(nextDocuments)) throw new TypeError("Search index must be an array");
-    documents = nextDocuments;
+    const payload = await response.json();
+    documents = validateSearchIndexEnvelope(payload, { kind: "global-search", locale });
     indexUrl = nextIndexUrl;
     return documents;
   }

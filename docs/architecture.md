@@ -21,7 +21,7 @@ The stylesheets are CSS-compatible SCSS. The build adds generated-file banners a
 
 ## Blog content adapter and validation boundary
 
-`scripts/blog/local-json-adapter.mjs` is the replaceable provider boundary. It reads the repository fixtures under `sources/content/blog/` and returns one raw object containing settings, categories, tags, authors, series, and articles. A future CMS adapter must return that same shape; vendor SDK objects and provider-specific identifiers stop at this boundary.
+`scripts/blog/local-json-adapter.mjs` is the replaceable provider boundary. It reads the repository fixtures under `sources/content/blog/` and returns one raw object containing settings, categories, tags, authors, series, and articles. Read and parse failures are aggregated with source filenames so one build reports every malformed fixture. A future CMS adapter must return that same shape; vendor SDK objects and provider-specific identifiers stop at this boundary.
 
 `scripts/blog/schema.mjs` clones, normalizes, and validates the raw object before rendering. It enforces stable IDs, localized slugs and required fields, content states and dates, category/tag/author/series relationships, author expertise, block types, safe links, hero accessibility fields, and archived-content resolution. Errors are collected and reported together by record, locale, and field. `npm run content:check` and the build both fail closed: invalid content produces no deployable replacement.
 
@@ -34,11 +34,13 @@ Published records available at build time flow into `scripts/blog/render-site.mj
 - `search-index-en.json` and `search-index-he.json` power the shared site-wide search across landing/authored site documents and published Blog content.
 - `blog/search-index-en.json` and `blog/search-index-he.json` power Blog-only query, filters, sort, and result counts.
 
+Both index families use an explicit compatible schema-version envelope. Build-time and runtime validators reject incompatible payloads, duplicate records, malformed metadata, and links outside the expected emitted local route families before enhanced results can replace server-rendered fallback content. Enhanced Blog cards consume structured localized primary/coauthor data and the same category, date, level, format, and reading-time metadata as their server-rendered equivalents.
+
 The same normalized model produces locale-aware Blog RSS feeds, category feeds, author feeds, English/Hebrew sitemaps, canonical and alternate metadata, structured data, redirects, related-content inputs, reading time, and derived counts. Search indexes and feeds contain public, published content only.
 
 ## CMS publishing workflow
 
-The repository fixtures are the current CMS-neutral mock source. A production integration changes the adapter import in `scripts/build.mjs`, supplies provider credentials only to the protected build environment, and returns the existing raw contract. A CMS publish/unpublish webhook is the integration point that triggers the GitHub build-and-deploy workflow. Validation, relationship, route, or rendering failures stop the workflow and preserve the previous successful static deployment. The browser never receives CMS credentials, provider SDKs, draft payloads, or a CMS endpoint.
+The repository fixtures are the current CMS-neutral mock source. A production integration changes the adapter import in `scripts/build.mjs`, supplies provider credentials only to the protected build environment, and returns the existing raw contract. A CMS publish/unpublish webhook is the integration point that triggers the GitHub content validation/build/artifact workflow. That workflow does not deploy: deployment remains part of the repository's regular merge and release flow. Validation, relationship, route, or rendering failures prevent a new artifact and leave the previous successful static deployment unchanged. The browser never receives CMS credentials, provider SDKs, draft payloads, or a CMS endpoint.
 
 ## Internationalization
 
@@ -46,17 +48,19 @@ English strings remain in the authored HTML. `sources/js/main.js` contains the H
 
 Authentication copy and route definitions live in `sources/js/auth-content.mjs`. `sources/js/auth.js` applies the selected language, fake-auth transitions, validation, and accessible status updates consistently across all authentication pages. Only the locale preference is stored; entered names, email addresses, passwords, and verification codes are never persisted.
 
-Blog localization is resolved during the build from `sources/content/blog/`. Each generated page receives a fixed `lang`, `dir`, localized route, localized accessible copy, and a peer-language link when that translation exists. Missing translations render an announced recovery page rather than silently falling back to the wrong language.
+Blog localization is resolved during the build from `sources/content/blog/`. Each generated page receives a fixed `lang`, `dir`, localized route, localized accessible copy, and a peer-language link when that translation exists. Static Blog entry and language-switch paths synchronize the shared locale preference used by landing and authentication routes; landing-page Blog links are retargeted when the language changes. Missing translations render an announced recovery page rather than silently falling back to the wrong language.
 
 Layout uses logical CSS properties where possible. Directional controls and the asymmetric contact decoration have explicit RTL transforms; brand and hero artwork retain their intended orientation.
 
 ## Blog prototype privacy boundary
 
-Newsletter, consultation, and comment demonstrations are intentionally local UI states. Newsletter and consultation handlers prevent transport and announce that nothing is sent. The signed-in comment preview is selected only by the `commenter=demo` query parameter; submitted comments live in an in-memory array for the current document session, are removed by reload/navigation, do not mutate the URL, and are never written to cookies or browser storage. No comment endpoint or durable comment service exists. Production identity, moderation, persistence, consent, abuse controls, and retention are outside this prototype boundary.
+Newsletter, authentication, and comment demonstrations are intentionally local UI states. Personal controls are disabled and non-submittable in initial/no-JavaScript HTML, then arm only after their local handlers are installed. Those handlers prevent transport and never place prototype email, password, or comment values in URLs, logs, measurement, or storage. Article consultation is a service-specific relationship block and contact link inside the reading column, not a personal-data form.
+
+The signed-in comment preview is selected only by the non-personal `commenter=demo` query parameter. Submitted comments and pending timers live in a transient in-memory session object, do not mutate the URL, and are never written to cookies or browser storage. `pagehide` and persisted `pageshow` clear the timer, session list, textarea, rendered items, and status copy so BFCache restoration cannot display stale comments. No comment endpoint or durable comment service exists. Production identity, moderation, persistence, consent, abuse controls, and retention are outside this prototype boundary.
 
 ## Tooling boundaries
 
-- `scripts/build.mjs` creates deterministic deployable output.
+- `scripts/build.mjs` creates deterministic deployable output and accepts only a canonical HTTPS `POSITIVUS_SITE_ORIGIN` origin override while preserving the governed base path.
 - `scripts/blog/local-json-adapter.mjs` supplies the CMS-neutral raw content contract.
 - `scripts/blog/schema.mjs` validates and normalizes content before any route is emitted.
 - `scripts/blog/render-site.mjs` and `scripts/blog/discovery.mjs` generate localized pages, search indexes, feeds, sitemaps, redirects, and metadata.

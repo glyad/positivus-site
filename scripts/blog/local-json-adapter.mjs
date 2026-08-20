@@ -1,7 +1,13 @@
 import { readdir, readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-const readJson = async (path) => JSON.parse(await readFile(path, "utf8"));
+async function readJson(path) {
+  try {
+    return JSON.parse(await readFile(path, "utf8"));
+  } catch (error) {
+    throw new Error(`${path}: ${error.message}`, { cause: error });
+  }
+}
 
 /**
  * Read the repository's CMS-neutral fixture format. Keeping this boundary small
@@ -14,12 +20,29 @@ export async function loadLocalBlogSource({ sourceDir }) {
     .filter((name) => name.endsWith(".json"))
     .sort();
 
+  const paths = [
+    resolve(blogDir, "settings.json"),
+    resolve(blogDir, "categories.json"),
+    resolve(blogDir, "tags.json"),
+    resolve(blogDir, "authors.json"),
+    resolve(blogDir, "series.json"),
+    ...articleNames.map((name) => resolve(articleDir, name))
+  ];
+  const results = await Promise.allSettled(paths.map(readJson));
+  const errors = results
+    .filter((result) => result.status === "rejected")
+    .map((result) => result.reason);
+  if (errors.length) {
+    throw new AggregateError(errors, "Unable to load Blog JSON sources");
+  }
+  const values = results.map((result) => result.value);
+
   return {
-    settings: await readJson(resolve(blogDir, "settings.json")),
-    categories: await readJson(resolve(blogDir, "categories.json")),
-    tags: await readJson(resolve(blogDir, "tags.json")),
-    authors: await readJson(resolve(blogDir, "authors.json")),
-    series: await readJson(resolve(blogDir, "series.json")),
-    articles: await Promise.all(articleNames.map((name) => readJson(resolve(articleDir, name))))
+    settings: values[0],
+    categories: values[1],
+    tags: values[2],
+    authors: values[3],
+    series: values[4],
+    articles: values.slice(5)
   };
 }

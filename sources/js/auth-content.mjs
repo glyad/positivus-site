@@ -161,6 +161,8 @@ const field = ({
         placeholder="${authText[placeholderKey].en}"
         autocomplete="${autocomplete}"
         aria-describedby="${describedBy}"
+        disabled
+        data-prototype-control
         ${required ? "required" : ""}
         ${inputmode ? `inputmode="${inputmode}"` : ""}
         ${maxlength ? `maxlength="${maxlength}"` : ""}
@@ -172,7 +174,7 @@ const field = ({
   </div>`;
 };
 
-const submitButton = (key) => `<button class="auth-submit" type="submit" data-submit>
+const submitButton = (key) => `<button class="auth-submit" type="submit" data-submit disabled data-prototype-control>
   <span data-submit-label>${text(key)}</span>
   ${icon("arrow-repeat", "auth-submit__spinner")}
 </button>`;
@@ -208,11 +210,11 @@ const stateArt = (iconName, tone = "green") => `<div class="auth-state-art auth-
 const signIn = authCard({
   titleKey: "welcomeBack",
   introKey: "signInIntro",
-  body: `<form class="auth-form" novalidate data-auth-form="sign-in">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="sign-in" data-prototype-form>
     ${field({ id: "email", labelKey: "email", type: "email", placeholderKey: "emailPlaceholder", autocomplete: "email", iconName: "envelope", inputmode: "email" })}
     ${field({ id: "password", labelKey: "password", type: "password", placeholderKey: "passwordPlaceholder", autocomplete: "current-password", iconName: "lock" })}
     <div class="auth-form__meta">
-      <label class="auth-checkbox"><input type="checkbox" name="remember" /><span>${text("rememberMe")}</span></label>
+      <label class="auth-checkbox"><input type="checkbox" name="remember" disabled data-prototype-control /><span>${text("rememberMe")}</span></label>
       <a href="forgot-password.html">${text("forgotPassword")}</a>
     </div>
     ${formStatus()}
@@ -233,7 +235,7 @@ const signUp = authCard({
   titleKey: "createTitle",
   introKey: "createIntro",
   modifier: "auth-card--wide",
-  body: `<form class="auth-form" novalidate data-auth-form="sign-up">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="sign-up" data-prototype-form>
     ${field({ id: "fullName", labelKey: "fullName", placeholderKey: "fullNamePlaceholder", autocomplete: "name", iconName: "person" })}
     ${field({ id: "email", labelKey: "email", type: "email", placeholderKey: "emailPlaceholder", autocomplete: "email", iconName: "envelope", inputmode: "email" })}
     ${field({ id: "password", labelKey: "password", type: "password", placeholderKey: "passwordPlaceholder", autocomplete: "new-password", iconName: "lock", minlength: 15 })}
@@ -241,7 +243,7 @@ const signUp = authCard({
     ${passwordGuidance()}
     <div class="auth-field auth-field--consent" data-field="consent">
       <label class="auth-checkbox auth-checkbox--consent">
-        <input type="checkbox" name="consent" required aria-describedby="consent-error" />
+        <input type="checkbox" name="consent" required aria-describedby="consent-error" disabled data-prototype-control />
         <span class="auth-consent-copy auth-consent-copy--en">${text("agreePrefix")} <a href="terms.html">${text("terms")}</a> ${text("and")} <a href="privacy.html">${text("privacyPolicy")}</a></span>
         <span class="auth-consent-copy auth-consent-copy--he" lang="he">אני מסכים/ה ל<a href="terms.html">תנאים</a> ו<a href="privacy.html">למדיניות הפרטיות</a></span>
       </label>
@@ -258,7 +260,7 @@ const signUp = authCard({
 const forgotPassword = authCard({
   titleKey: "forgotTitle",
   introKey: "forgotIntro",
-  body: `<form class="auth-form" novalidate data-auth-form="forgot-password">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="forgot-password" data-prototype-form>
     ${field({ id: "email", labelKey: "email", type: "email", placeholderKey: "emailPlaceholder", autocomplete: "email", iconName: "envelope", inputmode: "email" })}
     ${formStatus()}
     ${submitButton("sendResetLink")}
@@ -286,7 +288,7 @@ const checkEmail = authCard({
 const verifyEmail = authCard({
   titleKey: "verifyTitle",
   introKey: "verifyIntro",
-  body: `<form class="auth-form" novalidate data-auth-form="verify-email">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="verify-email" data-prototype-form>
     <div class="auth-field auth-field--otp" data-field="verificationCode">
       <label class="auth-field__label" for="verificationCode">${text("verificationCode")}</label>
       <div class="auth-otp" data-otp-shell>
@@ -302,6 +304,8 @@ const verifyEmail = authCard({
           aria-describedby="verificationCode-error"
           required
           data-otp-input
+          disabled
+          data-prototype-control
         />
         <div class="auth-otp__cells" aria-hidden="true">
           <span></span><span></span><span></span><span></span><span></span><span></span>
@@ -323,7 +327,7 @@ const verifyEmail = authCard({
 const resetPassword = authCard({
   titleKey: "resetTitle",
   introKey: "resetIntro",
-  body: `<form class="auth-form" novalidate data-auth-form="reset-password">
+  body: `<form class="auth-form" action="#prototype-only" method="get" novalidate data-auth-form="reset-password" data-prototype-form>
     ${field({ id: "password", labelKey: "newPassword", type: "password", placeholderKey: "passwordPlaceholder", autocomplete: "new-password", iconName: "lock", minlength: 15 })}
     ${field({ id: "confirmPassword", labelKey: "confirmPassword", type: "password", placeholderKey: "confirmPasswordPlaceholder", autocomplete: "new-password", iconName: "lock", minlength: 15 })}
     ${passwordGuidance()}

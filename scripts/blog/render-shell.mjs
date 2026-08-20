@@ -14,6 +14,10 @@ const copy = {
     requestQuote: "Request a quote",
     signIn: "Sign in",
     skip: "Skip to content",
+    skipNavigation: "Skip to primary navigation",
+    skipFilters: "Skip to filters",
+    skipResults: "Skip to results",
+    skipArticle: "Skip to article content",
     navigation: "Primary navigation",
     openNavigation: "Open navigation",
     closeNavigation: "Close navigation",
@@ -34,6 +38,10 @@ const copy = {
     requestQuote: "בקשת הצעת מחיר",
     signIn: "כניסה",
     skip: "דלגו לתוכן",
+    skipNavigation: "דלגו לניווט הראשי",
+    skipFilters: "דלגו למסננים",
+    skipResults: "דלגו לתוצאות",
+    skipArticle: "דלגו לתוכן המאמר",
     navigation: "ניווט ראשי",
     openNavigation: "פתיחת הניווט",
     closeNavigation: "סגירת הניווט",
@@ -209,11 +217,14 @@ ${socialImage ? `<meta property="og:image" content="${escapeAttribute(assetUrl(s
 <link rel="stylesheet" href="${escapeAttribute(asset("css/main.css"))}" />
 <link rel="stylesheet" href="${escapeAttribute(asset("css/blog.css"))}" />
 ${renderStructuredData(structuredData)}`;
+  const routeSkips = [`<a class="skip-link" href="#main-content">${escapeHtml(text.skip)}</a>`, `<a class="skip-link" href="#blog-site-navigation">${escapeHtml(text.skipNavigation)}</a>`];
+  if (mainHtml.includes("data-blog-browse")) routeSkips.push(`<a class="skip-link" href="#blog-filters">${escapeHtml(text.skipFilters)}</a>`, `<a class="skip-link" href="#blog-results">${escapeHtml(text.skipResults)}</a>`);
+  if (mainHtml.includes("data-article-page")) routeSkips.push(`<a class="skip-link" href="#article-body">${escapeHtml(text.skipArticle)}</a>`);
   const replacements = {
     "%%HTML_ATTRIBUTES%%": `lang="${locale}" dir="${locale === "he" ? "rtl" : "ltr"}"`,
     "%%HEAD%%": head,
     "%%BODY_CLASS%%": escapeAttribute(bodyClass),
-    "%%SKIP_LINK%%": `<a class="skip-link" href="#main-content">${escapeHtml(text.skip)}</a>`,
+    "%%SKIP_LINK%%": routeSkips.join("\n"),
     "%%HEADER%%": renderHeader({ locale, outputPath, alternatePath }),
     "%%MAIN%%": mainHtml,
     "%%FOOTER%%": renderFooter(locale),

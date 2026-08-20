@@ -89,6 +89,32 @@ test("loads the local JSON CMS source and orders article fixtures by filename", 
   }
 });
 
+test("aggregates JSON parse failures with every source filename", async () => {
+  const sourceDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-invalid-json-"));
+  const blogDir = resolve(sourceDir, "content", "blog");
+  const articleDir = resolve(blogDir, "articles");
+  try {
+    await mkdir(articleDir, { recursive: true });
+    await Promise.all([
+      writeFile(resolve(blogDir, "settings.json"), "{ invalid settings"),
+      writeFile(resolve(blogDir, "categories.json"), "[]"),
+      writeFile(resolve(blogDir, "tags.json"), "[]"),
+      writeFile(resolve(blogDir, "authors.json"), "[]"),
+      writeFile(resolve(blogDir, "series.json"), "[]"),
+      writeFile(resolve(articleDir, "broken-article.json"), "{ invalid article")
+    ]);
+
+    await assert.rejects(
+      loadLocalBlogSource({ sourceDir }),
+      (error) => error instanceof AggregateError && error.errors.length === 2 &&
+        error.errors.some((entry) => /settings\.json/.test(entry.message)) &&
+        error.errors.some((entry) => /broken-article\.json/.test(entry.message))
+    );
+  } finally {
+    await rm(sourceDir, { recursive: true, force: true });
+  }
+});
+
 test("rejects malformed blog settings IDs with contextual aggregate errors", () => {
   const invalid = structuredClone(validRaw);
   invalid.settings.id = "BAD!";
@@ -217,6 +243,86 @@ test("rejects more than five tags and invalid edited dates", () => {
 
 test("counts words across supported text blocks", () => {
   assert.equal(calculateReadingMinutes([{ type: "richText", heading: "One two", paragraphs: ["three four five"] }], 2), 3);
+});
+
+test("rejects every supported block shape that cannot render meaningful content", () => {
+  const malformedBlocks = [
+    { type: "introduction", heading: "Introduction", paragraphs: [] },
+    { type: "keyTakeaways", heading: "Key takeaways", items: [] },
+    { type: "richText", heading: "", paragraphs: [] },
+    { type: "figure", heading: "Figure", src: "assets/images/team/team-1.webp", alt: "" },
+    { type: "figure", decorative: true },
+    { type: "quote", heading: "Quote", text: "" },
+    { type: "stat", heading: "Stat", value: "", label: "A result" },
+    { type: "checklist", heading: "Checklist", items: [""] },
+    { type: "steps", heading: "Steps", items: [] },
+    { type: "table", heading: "Comparison", caption: "Decision table", columns: ["Only one"], rows: [["Cell"]] },
+    { type: "media", heading: "Media", src: "", alt: "Media" },
+    { type: "media", decorative: true },
+    { type: "download", heading: "Download", label: "Worksheet", fileLabel: "", href: "https://content.example/file.pdf" },
+    { type: "citations", heading: "Sources", citations: [] },
+    { type: "callout", heading: "Note", tone: "sales", body: "Useful copy." },
+    { type: "faq", heading: "FAQ", items: [{ question: "Why?", answer: "" }] },
+    { type: "consultation", serviceId: "seo", heading: "Talk to us", body: "", actionLabel: "Request a consultation" }
+  ];
+
+  for (const block of malformedBlocks) {
+    const invalid = structuredClone(validRaw);
+    invalid.articles[0].locales.en.blocks = [block];
+    assert.throws(
+      () => createBlogModel(invalid),
+      (error) => error instanceof AggregateError &&
+        error.errors.some((entry) => entry.message.includes("blocks[0]")),
+      `expected ${block.type} to be rejected`
+    );
+  }
+});
+
+test("requires one localized consultation relationship block for each related service", () => {
+  const missing = structuredClone(validRaw);
+  missing.articles[0].relatedService = "seo";
+  assert.throws(
+    () => createBlogModel(missing),
+    (error) => error instanceof AggregateError &&
+      error.errors.some((entry) => /seo-audit.*en.*consultation/.test(entry.message)) &&
+      error.errors.some((entry) => /seo-audit.*he.*consultation/.test(entry.message))
+  );
+
+  const mismatched = structuredClone(validRaw);
+  mismatched.articles[0].relatedService = "seo";
+  mismatched.articles[0].locales.en.blocks.push({
+    type: "consultation",
+    serviceId: "paid-media",
+    heading: "Apply this audit",
+    body: "This article's audit connects to our SEO planning service.",
+    actionLabel: "Discuss SEO planning"
+  });
+  mismatched.articles[0].locales.he.blocks.push({
+    type: "consultation",
+    serviceId: "seo",
+    heading: "יישום הבדיקה",
+    body: "הבדיקה במאמר קשורה ישירות לשירות תכנון ה-SEO שלנו.",
+    actionLabel: "שיחה על תכנון SEO"
+  });
+  assert.throws(
+    () => createBlogModel(mismatched),
+    (error) => error instanceof AggregateError &&
+      error.errors.some((entry) => /seo-audit.*en.*consultation.*seo/.test(entry.message))
+  );
+
+  const unrelated = structuredClone(validRaw);
+  unrelated.articles[0].locales.en.blocks.push({
+    type: "consultation",
+    serviceId: "seo",
+    heading: "Apply this audit",
+    body: "This article's audit connects to our SEO planning service.",
+    actionLabel: "Discuss SEO planning"
+  });
+  assert.throws(
+    () => createBlogModel(unrelated),
+    (error) => error instanceof AggregateError &&
+      error.errors.some((entry) => /seo-audit.*en.*consultation.*relatedService/.test(entry.message))
+  );
 });
 
 test("publishes only released records at the supplied build time", () => {

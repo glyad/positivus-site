@@ -15,6 +15,14 @@ import {
 import { repositoryRoot } from "../scripts/build.mjs";
 import { renderBlogSite } from "../scripts/blog/render-site.mjs";
 import { loadRepositoryBlogModel, loadRepositorySiteDocuments } from "./helpers/blog-fixture.mjs";
+import { validateSearchIndexEnvelope } from "../sources/js/search-index-contract.mjs";
+
+function emittedSearchRoutePaths(model, siteDocuments) {
+  return [...new Set(["en", "he"].flatMap((locale) => [
+    ...createGlobalSearchIndex({ model, siteDocuments, locale }).records,
+    ...createBlogSearchIndex({ model, locale }).records
+  ]).map((record) => record.href.split("#")[0]))];
+}
 
 test("keeps global and blog indexes separate", async () => {
   const model = await loadRepositoryBlogModel();
@@ -22,13 +30,72 @@ test("keeps global and blog indexes separate", async () => {
   const global = createGlobalSearchIndex({ model, siteDocuments, locale: "en" });
   const blog = createBlogSearchIndex({ model, locale: "en" });
 
-  assert.ok(global.some((entry) => entry.type === "service"));
-  assert.ok(global.some((entry) => entry.type === "author"));
-  assert.ok(blog.every((entry) => entry.type === "article"));
-  assert.equal(blog.length, 14);
-  assert.equal(global.filter((entry) => entry.type === "article").length, 14);
-  assert.match(blog[0].content, /\S/u);
-  assert.doesNotMatch(blog[0].content, /<[^>]+>/u);
+  assert.deepEqual({ schemaVersion: global.schemaVersion, kind: global.kind, locale: global.locale }, { schemaVersion: 1, kind: "global-search", locale: "en" });
+  assert.deepEqual({ schemaVersion: blog.schemaVersion, kind: blog.kind, locale: blog.locale }, { schemaVersion: 1, kind: "blog-search", locale: "en" });
+  assert.ok(global.records.some((entry) => entry.type === "service"));
+  assert.ok(global.records.some((entry) => entry.type === "author"));
+  assert.ok(blog.records.every((entry) => entry.type === "article"));
+  assert.equal(blog.records.length, 14);
+  assert.equal(global.records.filter((entry) => entry.type === "article").length, 14);
+  assert.match(blog.records[0].content, /\S/u);
+  assert.doesNotMatch(blog.records[0].content, /<[^>]+>/u);
+});
+
+test("rejects unsafe or incompatible search records before build and runtime use", async () => {
+  const model = await loadRepositoryBlogModel();
+  const siteDocuments = await loadRepositorySiteDocuments();
+  const unsafe = structuredClone(siteDocuments);
+  unsafe[0].locales.en.href = "javascript:alert(1)";
+  assert.throws(
+    () => createGlobalSearchIndex({ model, siteDocuments: unsafe, locale: "en" }),
+    /safe local route/
+  );
+
+  const valid = createGlobalSearchIndex({ model, siteDocuments, locale: "en" });
+  assert.equal(validateSearchIndexEnvelope(valid, { kind: "global-search", locale: "en" }), valid.records);
+  assert.throws(
+    () => validateSearchIndexEnvelope({ ...valid, schemaVersion: 2 }, { kind: "global-search", locale: "en" }),
+    /schema version/
+  );
+  const unsafeRuntime = structuredClone(valid);
+  unsafeRuntime.records[0].href = "javascript:alert(1)";
+  assert.throws(
+    () => validateSearchIndexEnvelope(unsafeRuntime, { kind: "global-search", locale: "en" }),
+    /safe local route/
+  );
+});
+
+test("rejects shape-safe search records that do not resolve to an emitted public route", async () => {
+  const model = await loadRepositoryBlogModel();
+  const siteDocuments = await loadRepositorySiteDocuments();
+  const missing = structuredClone(siteDocuments);
+  missing[0].locales.en.href = "missing/index.html";
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-missing-search-route-"));
+
+  await assert.rejects(
+    emitDiscoveryArtifacts({
+      model,
+      siteDocuments: missing,
+      outputDir,
+      siteOrigin: model.settings.siteOrigin,
+      publicRoutePaths: emittedSearchRoutePaths(model, siteDocuments)
+    }),
+    /search record href does not resolve to an emitted public route: missing\/index\.html/
+  );
+});
+
+test("blog index carries governed localized card metadata including coauthors", async () => {
+  const model = await loadRepositoryBlogModel();
+  const article = model.byId.article.get("marketing-dashboard");
+  article.coAuthors = ["maya-chen"];
+  const index = createBlogSearchIndex({ model, locale: "he" });
+  const document = index.records.find((entry) => entry.id === article.id);
+
+  assert.deepEqual(document.primaryAuthor, { id: "sofia-reyes", name: "סופיה רייס" });
+  assert.deepEqual(document.coAuthors, [{ id: "maya-chen", name: "מאיה צ׳ן" }]);
+  assert.equal(document.categoryLabel, "אנליטיקה ואופטימיזציה");
+  assert.equal(document.levelLabel, "בינוניים");
+  assert.equal(document.formatLabel, "מדריך");
 });
 
 test("feeds and sitemaps exclude unavailable translations and XML-escape text", async () => {
@@ -42,6 +109,21 @@ test("feeds and sitemaps exclude unavailable translations and XML-escape text", 
   assert.doesNotMatch(rss, /analytics-attribution-models/);
   assert.match(rss, /<rss version="2.0">/);
   assert.match(sitemap, /https:\/\/example\.test\/a\?b=1&amp;c=2/);
+});
+
+test("locale sitemaps include the tag and author directory routes", async () => {
+  const model = await loadRepositoryBlogModel();
+  const siteDocuments = await loadRepositorySiteDocuments();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-sitemap-directories-"));
+  await emitDiscoveryArtifacts({ model, siteDocuments, outputDir, siteOrigin: model.settings.siteOrigin });
+  const [english, hebrew] = await Promise.all([
+    readFile(resolve(outputDir, "sitemap-en.xml"), "utf8"),
+    readFile(resolve(outputDir, "sitemap-he.xml"), "utf8")
+  ]);
+  assert.match(english, /<loc>https:\/\/glyad\.github\.io\/positivus-site\/blog\/tags\/<\/loc>/);
+  assert.match(english, /<loc>https:\/\/glyad\.github\.io\/positivus-site\/blog\/authors\/<\/loc>/);
+  assert.match(hebrew, /<loc>https:\/\/glyad\.github\.io\/positivus-site\/he\/blog\/tags\/<\/loc>/);
+  assert.match(hebrew, /<loc>https:\/\/glyad\.github\.io\/positivus-site\/he\/blog\/authors\/<\/loc>/);
 });
 
 test("generates localized discovery artifacts and noindex redirect documents", async () => {
@@ -76,6 +158,11 @@ test("generates localized discovery artifacts and noindex redirect documents", a
   assert.match(redirect, /name="robots" content="noindex, nofollow"/);
   assert.match(redirect, /http-equiv="refresh" content="0; url=https:\/\/glyad\.github\.io\/positivus-site\/blog\/marketing-dashboard\//);
   assert.match(redirect, /href="https:\/\/glyad\.github\.io\/positivus-site\/blog\/marketing-dashboard\//);
+
+  const emittedIndex = JSON.parse(await readFile(resolve(outputDir, "blog/search-index-en.json"), "utf8"));
+  assert.equal(emittedIndex.schemaVersion, 1);
+  assert.equal(emittedIndex.kind, "blog-search");
+  assert.equal(validateSearchIndexEnvelope(emittedIndex, { kind: "blog-search", locale: "en" }), emittedIndex.records);
 });
 
 test("builds article JSON-LD with canonical URL and ISO dates", async () => {
@@ -190,7 +277,7 @@ test("accepts a redirect replacement targeting an emitted flat HTML page", async
     siteDocuments,
     outputDir,
     siteOrigin: model.settings.siteOrigin,
-    publicRoutePaths: ["index.html", "sign-in.html"]
+    publicRoutePaths: [...emittedSearchRoutePaths(model, siteDocuments), "sign-in.html"]
   });
 
   assert.ok(paths.includes("blog/retired-guide/index.html"));
@@ -213,7 +300,7 @@ test("accepts a redirect replacement targeting the emitted site root", async () 
     siteDocuments,
     outputDir,
     siteOrigin: model.settings.siteOrigin,
-    publicRoutePaths: ["index.html", "sign-in.html"]
+    publicRoutePaths: [...emittedSearchRoutePaths(model, siteDocuments), "sign-in.html"]
   });
 
   assert.ok(paths.includes("blog/retired-guide/index.html"));
@@ -237,7 +324,7 @@ test("rejects a redirect source that collides with an emitted flat HTML page", a
       siteDocuments,
       outputDir,
       siteOrigin: model.settings.siteOrigin,
-      publicRoutePaths: ["index.html", "sign-in.html"]
+      publicRoutePaths: [...emittedSearchRoutePaths(model, siteDocuments), "sign-in.html"]
     }),
     /redirect oldPath collides with an emitted public route/
   );

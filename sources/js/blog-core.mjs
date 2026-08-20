@@ -75,6 +75,20 @@ export function parseBlogSearchState(search = "", documents) {
   };
 }
 
+/** Serialize all governed Blog state so enhanced navigation remains shareable. */
+export function blogSearchParams(state) {
+  const params = new URLSearchParams();
+  if (state.query) params.set("q", state.query);
+  for (const [stateKey, parameter] of [["categories", "category"], ["formats", "format"], ["audiences", "audience"], ["levels", "level"], ["authors", "author"], ["duration", "duration"]]) {
+    for (const value of state[stateKey] ?? []) params.append(parameter, value);
+  }
+  if (state.from) params.set("from", state.from.slice(0, 10));
+  if (state.to) params.set("to", state.to.slice(0, 10));
+  if (state.sort !== (state.query ? "relevance" : "newest")) params.set("sort", state.sort);
+  if (state.page > 1) params.set("page", String(state.page));
+  return params;
+}
+
 /** Select the UI-only discussion view without carrying account or comment data. */
 export function commentDemoState(search = "") {
   const params = new URLSearchParams(String(search).split("#", 1)[0].replace(/^\?/u, ""));

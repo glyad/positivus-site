@@ -1,5 +1,6 @@
 import {
   commentDemoState,
+  blogSearchParams,
   createDemoComment,
   drawerFocusAction,
   filterBlogDocuments,
@@ -12,6 +13,11 @@ import {
 } from "./blog-core.mjs";
 import { dispatchInteraction } from "./measurement.mjs";
 import { bindInvalidCommentRecovery } from "./comment-form.mjs";
+import { armPrototypeForm } from "./prototype-form.mjs";
+import { createBlogCardPresentation } from "./blog-card.mjs";
+import { validateSearchIndexEnvelope } from "./search-index-contract.mjs";
+import { bindTransientPageLifecycle, createTransientCommentSession } from "./comment-session.mjs";
+import { persistLanguagePreference } from "./language-routing.mjs";
 
 const FACETS = ["category", "format", "audience", "level", "author", "duration"];
 
@@ -21,8 +27,8 @@ function locale() {
 
 function blogCopy() {
   return locale() === "he"
-    ? { results: "תוצאות", page: "עמוד", previous: "הקודם", next: "הבא", by: "מאת", noResults: "לא נמצאו תוצאות", filters: "מסננים פעילים", copySucceeded: "הקישור הועתק.", copyFailed: "לא הצלחנו להעתיק את הקישור.", commentAdded: "תגובת הדגמה נוספה למפגש הנוכחי בעמוד.", commentTooShort: "כתבו לפחות 2 תווים.", commentTooLong: "כתבו עד 2000 תווים.", commentSubmitting: "תגובת ההדגמה מתווספת למפגש הזה.", loadingResults: "אינדקס הבלוג נטען.", emptyQuery: "אין שאילתת חיפוש. כל התובנות מוצגות.", populatedResults: "תוצאות הבלוג עודכנו.", indexUnavailable: "אינדקס הבלוג אינו זמין. המאמרים שנטענו בשרת נשארים זמינים.", browseResults: "עיון בתוצאות הנוכחיות", newsletterSuccess: "הדגמת ההרשמה הושלמה. כתובת האימייל לא נשלחה ולא נשמרה.", newsletterFailure: "הזינו כתובת אימייל תקפה כדי לנסות שוב." }
-    : { results: "results", page: "Page", previous: "Previous", next: "Next", by: "By", noResults: "No results", filters: "Active filters", copySucceeded: "Link copied.", copyFailed: "Could not copy the link.", commentAdded: "Demo comment added for this page session.", commentTooShort: "Write at least 2 characters.", commentTooLong: "Write no more than 2000 characters.", commentSubmitting: "Adding the demo comment to this page session.", loadingResults: "Loading the Blog index.", emptyQuery: "No search query. Showing all insights.", populatedResults: "Blog results updated.", indexUnavailable: "The Blog index is unavailable. The server-rendered articles remain available.", browseResults: "Browse the current results", newsletterSuccess: "Prototype signup complete. The email address was not sent or stored.", newsletterFailure: "Enter a valid email address to try again." };
+    ? { results: "תוצאות", page: "עמוד", previous: "הקודם", next: "הבא", by: "מאת", noResults: "לא נמצאו תוצאות", filters: "מסננים פעילים", from: "פורסם מתאריך", to: "פורסם עד תאריך", copySucceeded: "הקישור הועתק.", copyFailed: "לא הצלחנו להעתיק את הקישור.", commentAdded: "תגובת הדגמה נוספה למפגש הנוכחי בעמוד.", commentTooShort: "כתבו לפחות 2 תווים.", commentTooLong: "כתבו עד 2000 תווים.", commentSubmitting: "תגובת ההדגמה מתווספת למפגש הזה.", loadingResults: "אינדקס הבלוג נטען.", emptyQuery: "אין שאילתת חיפוש. כל התובנות מוצגות.", populatedResults: "תוצאות הבלוג עודכנו.", indexUnavailable: "אינדקס הבלוג אינו זמין. המאמרים שנטענו בשרת נשארים זמינים.", browseResults: "עיון בתוצאות הנוכחיות", newsletterSuccess: "הדגמת ההרשמה הושלמה. כתובת האימייל לא נשלחה ולא נשמרה.", newsletterFailure: "הזינו כתובת אימייל תקפה כדי לנסות שוב." }
+    : { results: "results", page: "Page", previous: "Previous", next: "Next", by: "By", noResults: "No results", filters: "Active filters", from: "Published from", to: "Published through", copySucceeded: "Link copied.", copyFailed: "Could not copy the link.", commentAdded: "Demo comment added for this page session.", commentTooShort: "Write at least 2 characters.", commentTooLong: "Write no more than 2000 characters.", commentSubmitting: "Adding the demo comment to this page session.", loadingResults: "Loading the Blog index.", emptyQuery: "No search query. Showing all insights.", populatedResults: "Blog results updated.", indexUnavailable: "The Blog index is unavailable. The server-rendered articles remain available.", browseResults: "Browse the current results", newsletterSuccess: "Prototype signup complete. The email address was not sent or stored.", newsletterFailure: "Enter a valid email address to try again." };
 }
 
 function measure(action, contentType, contentId) {
@@ -34,16 +40,7 @@ function selectedValues(control) {
 }
 
 function queryFromState(state) {
-  const params = new URLSearchParams();
-  if (state.query) params.set("q", state.query);
-  for (const [stateKey, parameter] of [["categories", "category"], ["formats", "format"], ["audiences", "audience"], ["levels", "level"], ["authors", "author"], ["duration", "duration"]]) {
-    for (const value of state[stateKey]) params.append(parameter, value);
-  }
-  if (state.from) params.set("from", state.from.slice(0, 10));
-  if (state.to) params.set("to", state.to.slice(0, 10));
-  if (state.sort !== (state.query ? "relevance" : "newest")) params.set("sort", state.sort);
-  if (state.page > 1) params.set("page", String(state.page));
-  return params;
+  return blogSearchParams(state);
 }
 
 function stateFromControls(root, documents, current, controlsRoot = root) {
@@ -87,25 +84,31 @@ function articleHref(root, value) {
 }
 
 function articleCard(root, article) {
-  const copy = blogCopy();
+  const presentation = createBlogCardPresentation(article, locale());
   const card = document.createElement("article");
   card.className = "blog-card";
   card.dataset.articleCard = "";
   card.dataset.contentId = article.id;
+  const category = document.createElement("p");
+  category.className = "blog-card__category";
+  category.textContent = presentation.category;
   const heading = document.createElement("h3");
   const link = document.createElement("a");
   link.href = articleHref(root, article.href);
-  link.textContent = article.title;
+  link.textContent = presentation.title;
   link.dataset.measureAction = "result-select";
   link.dataset.contentType = "article";
   link.dataset.contentId = article.id;
   heading.append(link);
   const summary = document.createElement("p");
-  summary.textContent = article.summary;
+  summary.textContent = presentation.summary;
   const metadata = document.createElement("p");
   metadata.className = "blog-card__meta";
-  metadata.textContent = `${copy.by} ${(article.keywords ?? []).at(-1) ?? ""} · ${new Intl.DateTimeFormat(locale(), { dateStyle: "long", timeZone: "UTC" }).format(new Date(article.publishedAt))}`;
-  card.append(heading, summary, metadata);
+  metadata.textContent = presentation.meta;
+  const details = document.createElement("p");
+  details.className = "blog-card__details";
+  details.textContent = presentation.details;
+  card.append(category, heading, summary, metadata, details);
   return card;
 }
 
@@ -117,12 +120,21 @@ function renderChips(root, state, update) {
     ...state.authors.map((value) => ["authors", value]), ...state.duration.map((value) => ["duration", value]),
     ...(state.from ? [["from", state.from.slice(0, 10)]] : []), ...(state.to ? [["to", state.to.slice(0, 10)]] : [])
   ];
+  const toggleCount = root.querySelector("[data-filter-toggle-count]");
+  if (toggleCount) toggleCount.textContent = String(chips.length);
+  const chipLabel = (key, value) => {
+    if (key === "from" || key === "to") return `${blogCopy()[key]}: ${value}`;
+    const facet = { categories: "category", formats: "format", audiences: "audience", levels: "level", authors: "author", duration: "duration" }[key];
+    const control = root.querySelector(`[data-filter-${facet}]`);
+    const option = [...(control?.options ?? [])].find((entry) => entry.value === value);
+    return option?.textContent?.trim() || value;
+  };
   for (const region of regions) {
     region.replaceChildren(`${blogCopy().filters}: ${chips.length}`);
     for (const [key, value] of chips) {
       const button = document.createElement("button");
       button.type = "button";
-      button.textContent = `× ${value}`;
+      button.textContent = `× ${chipLabel(key, value)}`;
       button.addEventListener("click", () => {
         measure("filter-clear", "blog", "blog-index");
         const next = structuredClone(state);
@@ -135,14 +147,14 @@ function renderChips(root, state, update) {
   }
 }
 
-function renderPagination(root, page, update) {
+function renderPagination(root, page, state, update) {
   const navigation = root.querySelector("[data-pagination]");
   if (!navigation) return;
   const list = document.createElement("ol");
   for (let number = 1; number <= page.pageCount; number += 1) {
     const item = document.createElement("li");
     const link = document.createElement("a");
-    link.href = `?page=${number}`;
+    link.href = `?${blogSearchParams({ ...state, page: number }).toString()}`;
     link.textContent = String(number);
     if (number === page.page) link.setAttribute("aria-current", "page");
     link.addEventListener("click", (event) => { event.preventDefault(); update({ page: number }); });
@@ -215,7 +227,7 @@ function initBrowse(root) {
     const hasFilters = state.categories.length || state.formats.length || state.audiences.length || state.levels.length || state.authors.length || state.duration.length || state.from || state.to;
     setRuntimeStatus(!state.query && !hasFilters ? blogCopy().emptyQuery : blogCopy().populatedResults);
     renderChips(root, state, update);
-    renderPagination(root, page, update);
+    renderPagination(root, page, state, update);
     if (moveFocus) heading?.focus();
   };
 
@@ -225,8 +237,7 @@ function initBrowse(root) {
       return response.json();
     })
     .then((payload) => {
-      if (!Array.isArray(payload) || payload.some((document) => document?.type !== "article")) throw new TypeError("Blog index must contain articles only");
-      documents = payload;
+      documents = validateSearchIndexEnvelope(payload, { kind: "blog-search", locale: locale() });
       state = parseBlogSearchState(location.search, documents);
       state.page = Math.max(1, Number.parseInt(root.dataset.blogStaticPage ?? "", 10) || state.page);
       update();
@@ -346,8 +357,7 @@ function initNewsletterForms() {
       if (retry) retry.hidden = false;
     };
     form.addEventListener("invalid", () => announce(blogCopy().newsletterFailure, true), true);
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
+    armPrototypeForm(form, () => {
       measure("newsletter-submit", "newsletter", "blog-newsletter");
       if (!form.checkValidity()) { announce(blogCopy().newsletterFailure, true); return; }
       announce(blogCopy().newsletterSuccess);
@@ -424,7 +434,21 @@ function initBlogNavigation() {
   });
 }
 
-const demoComments = [];
+const commentSession = createTransientCommentSession();
+
+function resetDemoComments() {
+  commentSession.reset();
+  for (const root of document.querySelectorAll("[data-demo-comments]")) {
+    const form = root.querySelector("[data-demo-comment-form]");
+    const textarea = form?.elements.comment;
+    if (textarea) textarea.value = "";
+    root.querySelector("[data-demo-comment-list]")?.replaceChildren();
+    const status = root.querySelector("[data-demo-comment-status]");
+    if (status) { status.textContent = ""; status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); }
+    const submit = form?.querySelector('[type="submit"]');
+    if (submit && form.dataset.prototypeReady === "true") submit.disabled = false;
+  }
+}
 
 function initDemoComments() {
   for (const root of document.querySelectorAll("[data-demo-comments]")) {
@@ -450,14 +474,12 @@ function initDemoComments() {
     };
     bindInvalidCommentRecovery(textarea, announceInvalid);
     write?.addEventListener("click", () => textarea?.focus());
-    form.addEventListener("submit", (event) => {
-      event.preventDefault();
+    armPrototypeForm(form, () => {
       try {
         const comment = createDemoComment(textarea?.value);
         if (status) { status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); status.textContent = blogCopy().commentSubmitting; }
         if (submit) submit.disabled = true;
-        setTimeout(() => {
-          demoComments.push(comment);
+        commentSession.schedule(comment, () => {
           const item = document.createElement("li");
           item.dataset.demoCommentId = comment.id;
           item.textContent = comment.text;
@@ -465,7 +487,7 @@ function initDemoComments() {
           textarea.value = "";
           if (submit) submit.disabled = false;
           if (status) status.textContent = blogCopy().commentAdded;
-        }, 200);
+        });
       } catch (error) {
         announceInvalid(/no more than 2000/u.test(String(error?.message)) ? "too-long" : "too-short");
         textarea?.focus();
@@ -484,3 +506,12 @@ initMeasuredNavigation();
 initArticleToc();
 initBlogNavigation();
 initDemoComments();
+bindTransientPageLifecycle(window, resetDemoComments);
+try {
+  persistLanguagePreference(window.localStorage, locale());
+} catch {}
+document.querySelector(".language-toggle")?.addEventListener("click", () => {
+  try {
+    persistLanguagePreference(window.localStorage, locale() === "he" ? "en" : "he");
+  } catch {}
+});

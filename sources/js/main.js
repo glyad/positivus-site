@@ -1,3 +1,6 @@
+import { armPrototypeForm } from "./prototype-form.mjs";
+import { landingBlogHref } from "./language-routing.mjs";
+
 (() => {
   const html = document.documentElement;
   const body = document.body;
@@ -267,6 +270,9 @@
     translateTextNodes(currentLanguage);
     translateAttributes(currentLanguage);
     translateServiceHeadings(currentLanguage);
+    document.querySelectorAll("[data-blog-link]").forEach((link) => {
+      link.setAttribute("href", landingBlogHref(currentLanguage));
+    });
     updateLanguageToggle();
 
     if (persist) {
@@ -455,8 +461,7 @@
 
   const contactForm = document.querySelector("[data-contact-form]");
 
-  contactForm?.addEventListener("submit", (event) => {
-    event.preventDefault();
+  armPrototypeForm(contactForm, () => {
     const status = contactForm.querySelector("[data-form-status]");
     const fields = [
       { name: "email", message: "Enter a valid email address." },
@@ -492,8 +497,7 @@
 
   const newsletter = document.querySelector("[data-newsletter-form]");
 
-  newsletter?.addEventListener("submit", (event) => {
-    event.preventDefault();
+  armPrototypeForm(newsletter, () => {
     const input = newsletter.elements.email;
     const status = newsletter.querySelector("[data-newsletter-status]");
 

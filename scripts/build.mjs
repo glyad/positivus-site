@@ -11,7 +11,30 @@ import { createBlogModel } from "./blog/schema.mjs";
 const scriptPath = fileURLToPath(import.meta.url);
 export const repositoryRoot = resolve(dirname(scriptPath), "..");
 
-export async function buildSite({ rootDir = repositoryRoot } = {}) {
+function siteOriginFromOverride(value, basePath) {
+  let origin;
+  try {
+    const url = new URL(value);
+    if (
+      typeof value !== "string" ||
+      value !== url.origin ||
+      url.protocol !== "https:" ||
+      url.username ||
+      url.password ||
+      url.pathname !== "/" ||
+      url.search ||
+      url.hash
+    ) {
+      throw new TypeError();
+    }
+    origin = url.origin;
+  } catch {
+    throw new TypeError("POSITIVUS_SITE_ORIGIN must be a canonical HTTPS origin without credentials, path, query, or fragment");
+  }
+  return `${origin}${basePath === "/" ? "" : basePath.slice(0, -1)}`;
+}
+
+export async function buildSite({ rootDir = repositoryRoot, env = process.env } = {}) {
   const sourceDir = resolve(rootDir, "sources");
   const outputDir = resolve(rootDir, "dist");
   const packageMetadata = JSON.parse(
@@ -21,10 +44,14 @@ export async function buildSite({ rootDir = repositoryRoot } = {}) {
     resolve(sourceDir, "auth-template.html"),
     "utf8"
   );
-  const blogModel = createBlogModel(
-    await loadLocalBlogSource({ sourceDir }),
-    { now: new Date() }
-  );
+  const blogSource = await loadLocalBlogSource({ sourceDir });
+  if (env.POSITIVUS_SITE_ORIGIN !== undefined) {
+    blogSource.settings.siteOrigin = siteOriginFromOverride(
+      env.POSITIVUS_SITE_ORIGIN,
+      blogSource.settings.basePath
+    );
+  }
+  const blogModel = createBlogModel(blogSource, { now: new Date() });
   const siteDocuments = JSON.parse(
     await readFile(resolve(sourceDir, "content", "site-search.json"), "utf8")
   );

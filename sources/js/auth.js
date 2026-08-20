@@ -10,6 +10,7 @@ import {
   withSafeReturnPath
 } from "./auth-core.mjs";
 import { authPages, authText } from "./auth-content.mjs";
+import { armPrototypeForm } from "./prototype-form.mjs";
 
 const html = document.documentElement;
 const body = document.body;
@@ -239,8 +240,7 @@ document.querySelectorAll("[data-auth-form]").forEach((form) => {
     if (name) setFieldError(form, name);
   });
 
-  form.addEventListener("submit", (event) => {
-    event.preventDefault();
+  armPrototypeForm(form, () => {
     const status = form.querySelector("[data-form-status]");
     const issues = validateForm(form);
 

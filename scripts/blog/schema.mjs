@@ -341,7 +341,109 @@ function validateBlock(block, id, locale, index, collector) {
     collector.add(id, locale, field, "must be an object");
     return;
   }
-  if (!BLOCK_TYPES.has(block.type)) collector.add(id, locale, `${field}.type`, "is not a supported block type");
+  if (!BLOCK_TYPES.has(block.type)) {
+    collector.add(id, locale, `${field}.type`, "is not a supported block type");
+    return;
+  }
+  const requireText = (key) => {
+    if (typeof block[key] !== "string" || !block[key].trim()) {
+      collector.add(id, locale, `${field}.${key}`, "must be a non-empty string");
+    }
+  };
+  const requireTextList = (key) => {
+    if (!Array.isArray(block[key]) || block[key].length === 0 ||
+        block[key].some((entry) => typeof entry !== "string" || !entry.trim())) {
+      collector.add(id, locale, `${field}.${key}`, "must be a non-empty array of non-empty strings");
+    }
+  };
+  const headingRequired = !["introduction", "richText", "figure", "media", "callout"].includes(block.type);
+  if (headingRequired) requireText("heading");
+
+  if (["introduction", "richText"].includes(block.type)) requireTextList("paragraphs");
+  if (["keyTakeaways", "checklist", "steps"].includes(block.type)) requireTextList("items");
+  if (block.type === "quote") requireText("text");
+  if (block.type === "stat") {
+    if (!(["string", "number"].includes(typeof block.value)) || !String(block.value).trim()) {
+      collector.add(id, locale, `${field}.value`, "must be a non-empty string or finite number");
+    }
+    if (typeof block.value === "number" && !Number.isFinite(block.value)) {
+      collector.add(id, locale, `${field}.value`, "must be a non-empty string or finite number");
+    }
+    requireText("label");
+  }
+  if (block.type === "table") {
+    requireText("caption");
+    if (!Array.isArray(block.columns) || block.columns.length < 2 ||
+        block.columns.some((entry) => typeof entry !== "string" || !entry.trim())) {
+      collector.add(id, locale, `${field}.columns`, "must contain at least two non-empty column labels");
+    }
+    if (!Array.isArray(block.rows) || block.rows.length === 0 ||
+        block.rows.some((row) => !Array.isArray(row) || row.length !== block.columns?.length ||
+          row.some((entry) => typeof entry !== "string" || !entry.trim()))) {
+      collector.add(id, locale, `${field}.rows`, "must contain non-empty rows matching the column count");
+    }
+  }
+  if (block.type === "download") {
+    requireText("label");
+    requireText("fileLabel");
+    if (!isSafeLink(block.href ?? block.url)) collector.add(id, locale, `${field}.href`, "must be a safe link");
+  }
+  if (block.type === "citations") {
+    if (!Array.isArray(block.citations) || block.citations.length === 0) {
+      collector.add(id, locale, `${field}.citations`, "must be a non-empty array of cited links");
+    } else {
+      block.citations.forEach((citation, citationIndex) => {
+        const citationField = `${field}.citations[${citationIndex}]`;
+        if (!isObject(citation)) {
+          collector.add(id, locale, citationField, "must be an object");
+          return;
+        }
+        if (typeof citation.label !== "string" || !citation.label.trim()) {
+          collector.add(id, locale, `${citationField}.label`, "must be a non-empty string");
+        }
+        if (!isSafeLink(citation.href ?? citation.url)) {
+          collector.add(id, locale, `${citationField}.href`, "must be a safe link");
+        }
+      });
+    }
+  }
+  if (block.type === "callout") {
+    if (!new Set(["info", "warning", "expert"]).has(block.tone)) {
+      collector.add(id, locale, `${field}.tone`, "must be info, warning, or expert");
+    }
+    requireText("body");
+  }
+  if (block.type === "faq") {
+    if (!Array.isArray(block.items) || block.items.length === 0) {
+      collector.add(id, locale, `${field}.items`, "must be a non-empty array of questions and answers");
+    } else {
+      block.items.forEach((item, itemIndex) => {
+        const itemField = `${field}.items[${itemIndex}]`;
+        if (!isObject(item)) {
+          collector.add(id, locale, itemField, "must be an object");
+          return;
+        }
+        for (const key of ["question", "answer"]) {
+          if (typeof item[key] !== "string" || !item[key].trim()) {
+            collector.add(id, locale, `${itemField}.${key}`, "must be a non-empty string");
+          }
+        }
+      });
+    }
+  }
+  if (block.type === "consultation") {
+    if (typeof block.serviceId !== "string" || !ID_PATTERN.test(block.serviceId)) {
+      collector.add(id, locale, `${field}.serviceId`, "must be a lowercase kebab-case service ID");
+    }
+    requireText("body");
+    requireText("actionLabel");
+  }
+  if (block.type === "figure" && !Object.hasOwn(block, "src")) {
+    collector.add(id, locale, `${field}.src`, "must be a safe local asset path");
+  }
+  if (block.type === "media" && !["src", "image", "thumbnail"].some((key) => Object.hasOwn(block, key))) {
+    collector.add(id, locale, `${field}.src`, "must provide a safe local media asset path");
+  }
   for (const assetKey of ["src", "image", "thumbnail"]) {
     if (assetKey in block && !isSafeAssetPath(block[assetKey])) {
       collector.add(id, locale, `${field}.${assetKey}`, "must be a safe local asset path");
@@ -352,6 +454,33 @@ function validateBlock(block, id, locale, index, collector) {
     collector.add(id, locale, `${field}.alt`, "must be a non-empty string or media must be decorative");
   }
   validateLinkFields(block, id, locale, field, collector);
+}
+
+function validateConsultationRelationships(article, locales, collector) {
+  const relatedService = article.relatedService;
+  if (relatedService !== undefined &&
+      (typeof relatedService !== "string" || !ID_PATTERN.test(relatedService))) {
+    collector.add(article.id, "record", "relatedService", "must be a lowercase kebab-case service ID");
+  }
+
+  for (const locale of locales) {
+    const blocks = article.locales[locale].blocks;
+    const consultations = (Array.isArray(blocks) ? blocks : [])
+      .filter((block) => isObject(block) && block.type === "consultation");
+    if (relatedService === undefined) {
+      if (consultations.length) {
+        collector.add(article.id, locale, "consultation", "requires a matching article relatedService");
+      }
+      continue;
+    }
+    if (consultations.length !== 1) {
+      collector.add(article.id, locale, "consultation", `must contain exactly one localized block for related service ${relatedService}`);
+      continue;
+    }
+    if (consultations[0].serviceId !== relatedService) {
+      collector.add(article.id, locale, "consultation", `must match related service ${relatedService}`);
+    }
+  }
 }
 
 function indexRecords(records, type, collector) {
@@ -512,8 +641,6 @@ function validateArticle(article, indexes, collector) {
       if (!indexes.article.has(relatedId)) collector.add(id, "record", "relatedArticles", `references unknown article ${relatedId}`);
     }
   }
-  if (article.relatedService && typeof article.relatedService !== "string") collector.add(id, "record", "relatedService", "must be a service ID string");
-
   validateArticleLocaleRelationships(article, locales, indexes, collector);
 
   const publishedAt = parseDate(article.publishedAt, id, "publishedAt", collector);
@@ -528,6 +655,7 @@ function validateArticle(article, indexes, collector) {
     const blocks = article.locales[locale].blocks;
     if (Array.isArray(blocks)) blocks.forEach((block, index) => validateBlock(block, id, locale, index, collector));
   }
+  validateConsultationRelationships(article, locales, collector);
   article.readingMinutes = Object.fromEntries(locales.map((locale) => {
     const override = isObject(article.readingMinutesOverride)
       ? article.readingMinutesOverride[locale]

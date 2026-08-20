@@ -7,6 +7,30 @@ import test from "node:test";
 
 import { buildSite, repositoryRoot } from "../scripts/build.mjs";
 
+function assertNoJsSafePrototypeForms(html, label) {
+  const forms = [...html.matchAll(/<form\b[^>]*data-prototype-form[^>]*>[\s\S]*?<\/form>/gu)].map((match) => match[0]);
+  assert.ok(forms.length > 0, `${label} must expose at least one prototype form`);
+  assert.match(html, /<noscript>[\s\S]*not sent|<noscript>[\s\S]*אינם נשלחים/u, `${label} must disclose its no-JavaScript state`);
+
+  for (const form of forms) {
+    const openingTag = form.match(/^<form\b[^>]*>/u)?.[0] ?? "";
+    assert.match(openingTag, /action="#prototype-only"/u, `${label} must use the inert prototype action`);
+    assert.match(openingTag, /method="get"/u, `${label} must declare an explicit method`);
+    const namedControls = [...form.matchAll(/<(?:input|textarea|select)\b[^>]*\bname="[^"]+"[^>]*>/gu)].map((match) => match[0]);
+    assert.ok(namedControls.length > 0, `${label} prototype form must contain a named control`);
+    for (const control of namedControls) {
+      assert.match(control, /\bdisabled\b/u, `${label} named control must be disabled before enhancement`);
+      assert.match(control, /\bdata-prototype-control\b/u, `${label} named control must be explicitly armed by enhancement`);
+    }
+    const submitters = [...form.matchAll(/<button\b[^>]*type="submit"[^>]*>/gu)].map((match) => match[0]);
+    assert.ok(submitters.length > 0, `${label} prototype form must contain a submitter`);
+    for (const submitter of submitters) {
+      assert.match(submitter, /\bdisabled\b/u, `${label} submitter must be disabled before enhancement`);
+      assert.match(submitter, /\bdata-prototype-control\b/u, `${label} submitter must be explicitly armed by enhancement`);
+    }
+  }
+}
+
 test("generated blog pages expose required accessibility and state hooks", async () => {
   await buildSite();
   const article = await readFile(resolve(repositoryRoot, "dist/blog/seo-audit-90-minutes/index.html"), "utf8");
@@ -141,7 +165,8 @@ test("build creates the deployable static site", async () => {
   const html = await readFile(resolve(outputDir, "index.html"), "utf8");
   assert.match(html, /css\/main\.css/);
   assert.match(html, /js\/main\.js/);
-  assert.match(html, /href="blog\/index\.html">Blog<\/a>/);
+  assert.match(html, /href="blog\/index\.html" data-blog-link>Blog<\/a>/);
+  assert.equal((html.match(/data-blog-link/g) ?? []).length, 2);
   assert.match(html, /href="search\/index\.html" data-site-search-open/);
   assert.match(html, /data-site-search-dialog/);
   assert.match(html, /data-site-search-index="search-index-en\.json"/);
@@ -167,6 +192,35 @@ test("build creates the deployable static site", async () => {
   const fallbackHtml = await readFile(resolve(outputDir, "search/index.html"), "utf8");
   assert.match(fallbackHtml, /data-site-search-fallback/);
   assert.match(fallbackHtml, /action="index\.html" method="get" role="search"/);
+});
+
+test("HTTPS site-origin override changes only the canonical origin and preserves the base path", async () => {
+  const outputDir = await buildSite({ env: { POSITIVUS_SITE_ORIGIN: "https://preview.example" } });
+  const html = await readFile(resolve(outputDir, "blog/index.html"), "utf8");
+  assert.match(html, /rel="canonical" href="https:\/\/preview\.example\/positivus-site\/blog\/"/);
+  assert.match(html, /property="og:url" content="https:\/\/preview\.example\/positivus-site\/blog\/"/);
+});
+
+test("rejects unsafe site-origin overrides before replacing build output", async () => {
+  for (const value of ["http://preview.example", "https://user@preview.example", "https://preview.example/path", "https://preview.example?draft=1", "https://preview.example#draft"]) {
+    await assert.rejects(
+      buildSite({ env: { POSITIVUS_SITE_ORIGIN: value } }),
+      /POSITIVUS_SITE_ORIGIN/
+    );
+  }
+});
+
+test("personal prototype forms are non-submittable in initial and no-JavaScript HTML", async () => {
+  const outputDir = await buildSite();
+  const [landing, auth, blogArticle] = await Promise.all([
+    readFile(resolve(outputDir, "index.html"), "utf8"),
+    readFile(resolve(outputDir, "sign-up.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/paid-media-budget/index.html"), "utf8")
+  ]);
+
+  assertNoJsSafePrototypeForms(landing, "landing page");
+  assertNoJsSafePrototypeForms(auth, "authentication page");
+  assertNoJsSafePrototypeForms(blogArticle, "Blog article");
 });
 
 test("blog pages load the editorial stylesheet after shared styles without leaking it to landing pages", async () => {
@@ -216,7 +270,7 @@ test("signed-out Blog comments keep the demo form visually hidden", async () => 
     readFile(resolve(outputDir, "css/blog.css"), "utf8")
   ]);
 
-  assert.match(articleHtml, /<form data-demo-comment-form hidden>/);
+  assert.match(articleHtml, /<form[^>]*data-demo-comment-form[^>]*hidden[^>]*>/);
   assert.match(
     blogStyles,
     /\[data-demo-comment-form\]\[hidden\]\s*\{\s*display:\s*none/,

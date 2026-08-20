@@ -8,14 +8,27 @@ import { resolve } from "node:path";
 
 import { repositoryRoot } from "../scripts/build.mjs";
 import { loadLocalBlogSource } from "../scripts/blog/local-json-adapter.mjs";
+import { renderArticleCard } from "../scripts/blog/render-pages.mjs";
 import { renderBlogSite } from "../scripts/blog/render-site.mjs";
 import { createBlogModel } from "../scripts/blog/schema.mjs";
 import { loadRepositoryBlogModel } from "./helpers/blog-fixture.mjs";
 
 const resolveAsset = (path) => `../../${path}`;
 
+test("server-rendered cards display the same governed primary and coauthor names as enhancement", async () => {
+  const model = await loadRepositoryBlogModel();
+  const article = model.byId.article.get("marketing-dashboard");
+  article.coAuthors = ["maya-chen"];
+
+  const html = renderArticleCard({ model, locale: "en", outputPath: "blog/index.html", article });
+
+  assert.match(html, /<span>By Sofia Reyes, Maya Chen<\/span>/);
+  assert.doesNotMatch(html, /<span>By (?:analytics|reporting)/iu);
+});
+
 test("renders the first structured article blocks with semantic HTML and escaped authored content", () => {
   const html = renderBlocks([
+    { type: "introduction", heading: "Introduction", paragraphs: ["Start with < context."] },
     { type: "keyTakeaways", heading: "Key < takeaways", items: ["Measure < outcomes", "Never trust <script>alert(1)</script>"] },
     { type: "richText", heading: "Start here", paragraphs: ["Use evidence & context.", "Keep \"claims\" honest."] },
     { type: "figure", src: "assets/images/team/team-1.webp", alt: "A < useful image", caption: "Image & context", attribution: "Ava \"Roe\"" },
@@ -26,6 +39,7 @@ test("renders the first structured article blocks with semantic HTML and escaped
   ], { locale: "en", resolveAsset, consultation: null });
 
   assert.match(html, /<section class="article-block article-block--key-takeaways">/);
+  assert.match(html, /<section class="article-block article-block--introduction"><h2>Introduction<\/h2><p>Start with &lt; context\.<\/p><\/section>/);
   assert.match(html, /<ul>/);
   assert.match(html, /<ol>/);
   assert.match(html, /<figure>/);
@@ -97,13 +111,12 @@ test("renders a consultation only for its resolved service relationship", () => 
     serviceId: "seo",
     heading: "Talk to < a specialist",
     body: "Plan the next step.",
-    actionLabel: "Request a consultation",
-    href: "https://example.com/contact"
+    actionLabel: "Request a consultation"
   };
   const matching = renderBlocks([block], {
     locale: "en",
     resolveAsset,
-    consultation: { serviceId: "seo" }
+    consultation: { serviceId: "seo", href: "../../index.html#contact" }
   });
   const mismatched = renderBlocks([block], {
     locale: "en",
@@ -113,7 +126,8 @@ test("renders a consultation only for its resolved service relationship", () => 
 
   assert.match(matching, /Talk to &lt; a specialist/);
   assert.match(matching, /data-consultation-service="seo"/);
-  assert.match(matching, /target="_blank" rel="noreferrer noopener"/);
+  assert.match(matching, /href="\.\.\/\.\.\/index\.html#contact"/);
+  assert.doesNotMatch(matching, /target="_blank"/);
   assert.equal(mismatched, "");
   assert.equal(renderBlocks([{ type: "consultation", serviceId: "seo" }], { locale: "en", resolveAsset, consultation: null }), "");
 });
@@ -240,6 +254,42 @@ test("article pages expose the approved editorial hierarchy and prototype-only c
   assert.match(html, /data-demo-comments[^>]*data-prototype="true"/);
 });
 
+test("related services render one localized relationship prompt inside the reading column", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-consultation-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const [english, hebrew] = await Promise.all([
+    readFile(resolve(outputDir, "blog/paid-media-budget/index.html"), "utf8"),
+    readFile(resolve(outputDir, "he/blog/taktziv-media-memumenet-lomed/index.html"), "utf8")
+  ]);
+  for (const html of [english, hebrew]) {
+    const bodyStart = html.indexOf('<div class="article-body"');
+    const bodyEnd = html.indexOf("<section data-article-tags", bodyStart);
+    const body = html.slice(bodyStart, bodyEnd);
+    assert.equal((html.match(/data-consultation-service=/g) ?? []).length, 1);
+    assert.match(body, /data-consultation-service="paid-media"/);
+    assert.doesNotMatch(html, /data-consultation-status/);
+  }
+  assert.match(english, /This article.+paid-media planning/s);
+  assert.match(hebrew, /במאמר.+תכנון המדיה הממומנת/s);
+});
+
+test("shows Last edited only for a materially later date while retaining machine metadata", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-edited-date-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+
+  const [unchanged, changed] = await Promise.all([
+    readFile(resolve(outputDir, "blog/paid-media-budget/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8")
+  ]);
+  assert.doesNotMatch(unchanged, /Last edited/);
+  assert.match(unchanged, /<meta itemprop="dateModified" content="2026-06-17T09:00:00\.000Z" \/>/);
+  assert.match(changed, /Last edited/);
+  assert.match(changed, /itemprop="dateModified"/);
+});
+
 test("article pages render progressive article tools and the in-memory comment demonstration", async () => {
   const model = await loadRepositoryBlogModel();
   const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-article-tools-"));
@@ -280,7 +330,8 @@ test("renders announced, recoverable Blog states for content, search, media, con
   assert.match(article, /data-demo-comment-signed-out[^>]*data-system-state="signed-out-comment"[\s\S]*data-state-recovery/);
   assert.match(article, /data-demo-comment-status[^>]*aria-live="polite"/);
   assert.match(article, /data-comment-session-reset[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-state-recovery/);
-  assert.match(consultation, /data-consultation-status[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-state-recovery/);
+  assert.match(consultation, /data-consultation-service="paid-media"[\s\S]*article-block__consultation-action/);
+  assert.doesNotMatch(consultation, /data-consultation-status/);
   assert.match(missing, /data-system-state="missing-translation"[^>]*role="status"[^>]*aria-live="polite"[\s\S]*data-state-recovery/);
   assert.match(withdrawn, /data-system-state="withdrawn-content"[^>]*role="alert"[^>]*aria-live="assertive"[\s\S]*data-state-recovery/);
   assert.match(preview, /data-system-state="invalid-preview"[^>]*role="alert"[^>]*aria-live="assertive"[\s\S]*data-state-recovery/);
@@ -540,6 +591,34 @@ test("browse exposes localized controls for every approved filter and its mobile
   assert.match(english, /<option value="seo">SEO<\/option>/);
   assert.match(english, /<option value="maya-chen">Maya Chen<\/option>/);
   assert.match(hebrew, /<option value="paid-media">מדיה ממומנת<\/option>/);
+});
+
+test("browse and article routes expose associated controls and route-specific skip links", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-skip-links-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+  const [browse, article] = await Promise.all([
+    readFile(resolve(outputDir, "blog/search/index.html"), "utf8"),
+    readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8")
+  ]);
+
+  assert.match(browse, /href="#blog-site-navigation"[^>]*>Skip to primary navigation/);
+  assert.match(browse, /href="#blog-filters"[^>]*>Skip to filters/);
+  assert.match(browse, /href="#blog-results"[^>]*>Skip to results/);
+  assert.match(browse, /id="blog-filters"/);
+  assert.match(browse, /data-filter-toggle[^>]*aria-controls="blog-filter-drawer"[^>]*aria-describedby="blog-filter-summary"/);
+  assert.match(browse, /data-filter-toggle-count[^>]*>0</);
+  assert.match(browse, /id="blog-filter-drawer"/);
+  assert.match(article, /href="#article-body"[^>]*>Skip to article content/);
+  assert.doesNotMatch(article, /tabindex="[1-9]/);
+});
+
+test("signed-out comment actions have a dedicated logical-spacing container", async () => {
+  const model = await loadRepositoryBlogModel();
+  const outputDir = await mkdtemp(resolve(tmpdir(), "positivus-blog-comment-actions-"));
+  await renderBlogSite({ model, sourceDir: resolve(repositoryRoot, "sources"), outputDir, version: "1.2.0" });
+  const html = await readFile(resolve(outputDir, "blog/marketing-dashboard/index.html"), "utf8");
+  assert.match(html, /data-demo-comment-signed-out[^>]*class="demo-comment-actions"/);
 });
 
 test("Blog Home gives only its featured guide escaped, depth-safe hero artwork", async () => {

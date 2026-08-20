@@ -76,6 +76,11 @@ function renderKeyTakeaways(block) {
   return section("key-takeaways", heading(block.heading) + renderList(block.items, "ul"));
 }
 
+function renderIntroduction(block) {
+  const paragraphs = textItems(block.paragraphs).map((paragraph) => "<p>" + text(paragraph) + "</p>").join("");
+  return paragraphs ? section("introduction", heading(block.heading) + paragraphs) : "";
+}
+
 function renderRichText(block) {
   const paragraphs = textItems(block.paragraphs).map((paragraph) => "<p>" + text(paragraph) + "</p>").join("");
   return section("rich-text", heading(block.heading) + paragraphs);
@@ -221,7 +226,7 @@ function renderConsultation(block, consultation) {
   if (!consultation || typeof consultation !== "object" || Array.isArray(consultation) ||
       typeof block.serviceId !== "string" || !SAFE_SERVICE_ID.test(block.serviceId) ||
       consultation.serviceId !== block.serviceId) return "";
-  const action = renderLink(block.href ?? block.url, block.actionLabel, "article-block__consultation-action");
+  const action = renderLink(consultation.href, block.actionLabel, "article-block__consultation-action");
   if (!action) return "";
   const body = text(block.body);
   return '<section class="article-block article-block--consultation" data-consultation-service="' +
@@ -235,6 +240,7 @@ export function renderBlocks(blocks, { locale = "en", resolveAsset, consultation
   return blocks.map((block) => {
     if (!block || typeof block !== "object" || Array.isArray(block)) return "";
     switch (block.type) {
+      case "introduction": return renderIntroduction(block);
       case "keyTakeaways": return renderKeyTakeaways(block);
       case "richText": return renderRichText(block);
       case "figure": return renderFigure(block, resolveAsset);

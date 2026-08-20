@@ -2,9 +2,14 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
 import { blogRoute } from "./routes.mjs";
+import { createSearchIndexEnvelope } from "../../sources/js/search-index-contract.mjs";
 
 const LOCALES = ["en", "he"];
 const localized = (record, locale) => record?.locales?.[locale] ?? null;
+const dimensionLabels = {
+  en: { beginner: "Beginner", intermediate: "Intermediate", advanced: "Advanced", guide: "Guide", "how-to": "How-to", framework: "Framework", checklist: "Checklist", "case-analysis": "Case analysis", opinion: "Opinion", "industry-update": "Industry update" },
+  he: { beginner: "מתחילים", intermediate: "בינוניים", advanced: "מתקדמים", guide: "מדריך", "how-to": "איך עושים", framework: "מסגרת", checklist: "רשימת בדיקה", "case-analysis": "ניתוח מקרה", opinion: "דעה", "industry-update": "עדכון ענפי" }
+};
 
 function stripMarkup(value) {
   return String(value ?? "")
@@ -103,14 +108,16 @@ export function createGlobalSearchIndex({ model, siteDocuments, locale }) {
       keywords: [metadata.category, ...metadata.tags, ...metadata.authors].filter(Boolean).map(stripMarkup)
     };
   });
-  return [...site, ...authors, ...articleDocuments];
+  return createSearchIndexEnvelope({ kind: "global-search", locale, records: [...site, ...authors, ...articleDocuments] });
 }
 
 /** Create the full-text, filterable Blog index for one locale. */
 export function createBlogSearchIndex({ model, locale }) {
-  return publicArticles(model, locale).map((article) => {
+  const records = publicArticles(model, locale).map((article) => {
     const content = localized(article, locale);
     const metadata = articleKeywords(model, article, locale);
+    const primaryAuthor = model.byId.author.get(article.primaryAuthor);
+    const coAuthors = (article.coAuthors ?? []).map((id) => model.byId.author.get(id));
     return {
       id: article.id,
       type: "article",
@@ -126,11 +133,17 @@ export function createBlogSearchIndex({ model, locale }) {
       level: article.level,
       format: article.format,
       authors: [article.primaryAuthor, ...(article.coAuthors ?? [])],
+      primaryAuthor: { id: primaryAuthor.id, name: stripMarkup(localized(primaryAuthor, locale).name) },
+      coAuthors: coAuthors.map((author) => ({ id: author.id, name: stripMarkup(localized(author, locale).name) })),
+      categoryLabel: stripMarkup(metadata.category),
+      levelLabel: dimensionLabels[locale][article.level],
+      formatLabel: dimensionLabels[locale][article.format],
       readingMinutes: article.readingMinutes[locale],
       publishedAt: article.publishedAt.toISOString(),
       editedAt: article.editedAt.toISOString()
     };
   });
+  return createSearchIndexEnvelope({ kind: "blog-search", locale, records });
 }
 
 /** Render a locale-specific RSS feed for all, category, or author articles. */
@@ -192,6 +205,8 @@ function sitemapEntries(model, siteDocuments, locale, siteOrigin) {
     if (content?.href && !content.href.includes("#")) add(content.href);
   }
   add(blogRoute({ locale, kind: "home" }));
+  add(blogRoute({ locale, kind: "tags" }));
+  add(blogRoute({ locale, kind: "authors" }));
   const articles = publicArticles(model, locale);
   const articleIds = new Set(articles.map((article) => article.id));
   for (const category of model.categories.filter((record) => localized(record, locale) && articles.some((article) => article.primaryCategory === record.id))) add(blogRoute({ locale, kind: "category", slug: localized(category, locale).slug }));
@@ -251,6 +266,19 @@ function validateRedirects({ model, siteOrigin, publicRoutePaths }) {
   });
 }
 
+function validateSearchRecordRoutes(searchIndexes, publicRoutePaths) {
+  if (publicRoutePaths === undefined) return;
+  const publicPaths = new Set(publicRoutePaths);
+  for (const index of searchIndexes) {
+    for (const record of index.records) {
+      const outputPath = record.href.split("#")[0];
+      if (!publicPaths.has(outputPath)) {
+        throw new Error(`search record href does not resolve to an emitted public route: ${record.href}`);
+      }
+    }
+  }
+}
+
 function renderRedirect({ redirect, siteOrigin }) {
   const destination = new URL(redirect.replacementPath, siteOrigin).href;
   const hebrew = redirect.locale === "he";
@@ -269,11 +297,17 @@ async function emitFile(outputDir, outputPath, content, paths) {
 /** Emit deterministic locale-specific search, feed, sitemap, and redirect artifacts. */
 export async function emitDiscoveryArtifacts({ model, siteDocuments, outputDir, siteOrigin, publicRoutePaths }) {
   const redirects = validateRedirects({ model, siteOrigin, publicRoutePaths });
+  const searchIndexes = LOCALES.map((locale) => ({
+    locale,
+    global: createGlobalSearchIndex({ model, siteDocuments, locale }),
+    blog: createBlogSearchIndex({ model, locale })
+  }));
+  validateSearchRecordRoutes(searchIndexes.flatMap(({ global, blog }) => [global, blog]), publicRoutePaths);
   const paths = [];
-  for (const locale of LOCALES) {
-    await emitFile(outputDir, `search-index-${locale}.json`, `${JSON.stringify(createGlobalSearchIndex({ model, siteDocuments, locale }), null, 2)}\n`, paths);
+  for (const { locale, global, blog } of searchIndexes) {
+    await emitFile(outputDir, `search-index-${locale}.json`, `${JSON.stringify(global, null, 2)}\n`, paths);
     const prefix = locale === "he" ? "he/blog" : "blog";
-    await emitFile(outputDir, `blog/search-index-${locale}.json`, `${JSON.stringify(createBlogSearchIndex({ model, locale }), null, 2)}\n`, paths);
+    await emitFile(outputDir, `blog/search-index-${locale}.json`, `${JSON.stringify(blog, null, 2)}\n`, paths);
     await emitFile(outputDir, `${prefix}/rss-${locale}.xml`, renderRss({ model, locale, scope: "all" }), paths);
     for (const category of model.categories.filter((record) => localized(record, locale))) {
       await emitFile(outputDir, `${prefix}/category/${localized(category, locale).slug}/rss-${locale}.xml`, renderRss({ model, locale, scope: `category:${category.id}` }), paths);

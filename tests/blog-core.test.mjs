@@ -12,9 +12,11 @@ import {
   parseBlogSearchState,
   relatedArticleIds,
   sortBlogDocuments
-  ,shouldApplyDesktopFilterChange
+  ,shouldApplyDesktopFilterChange,
+  blogSearchParams
 } from "../sources/js/blog-core.mjs";
 import { createBlogSearchIndex } from "../scripts/blog/discovery.mjs";
+import { createBlogCardPresentation } from "../sources/js/blog-card.mjs";
 import { loadRepositoryBlogModel } from "./helpers/blog-fixture.mjs";
 
 test("combines dimensions and defaults to relevance only with a query", () => {
@@ -70,10 +72,44 @@ test("filters the author directory by name and expertise", async () => {
 
 test("ignores unsupported URL filter values after allowlists are supplied from the loaded blog index", async () => {
   const model = await loadRepositoryBlogModel();
-  const documents = createBlogSearchIndex({ model, locale: "en" });
+  const documents = createBlogSearchIndex({ model, locale: "en" }).records;
   const state = parseBlogSearchState("?category=seo&category=not-a-category&author=not-an-author", documents);
   assert.deepEqual(state.categories, ["seo"]);
   assert.deepEqual(state.authors, []);
+});
+
+test("enhanced card presentation matches governed localized metadata and never keywords", () => {
+  const article = {
+    id: "coauthored-guide",
+    title: "A shared guide",
+    summary: "A governed summary.",
+    href: "blog/shared-guide/index.html",
+    keywords: ["Wrong keyword", "Not an author"],
+    categoryLabel: "Analytics & Optimization",
+    primaryAuthor: { id: "daniel-levi", name: "Daniel Levi" },
+    coAuthors: [{ id: "maya-chen", name: "Maya Chen" }],
+    levelLabel: "Intermediate",
+    formatLabel: "Guide",
+    readingMinutes: 6,
+    publishedAt: "2026-08-10T00:00:00.000Z"
+  };
+
+  assert.deepEqual(createBlogCardPresentation(article, "en"), {
+    category: "Analytics & Optimization",
+    title: "A shared guide",
+    summary: "A governed summary.",
+    meta: "By Daniel Levi, Maya Chen · August 10, 2026",
+    details: "Level: Intermediate · Format: Guide · 6 min read"
+  });
+});
+
+test("enhanced pagination preserves the full query, filter, date, and sort state", () => {
+  const state = parseBlogSearchState("?q=seo&category=seo&format=checklist&audience=leaders&level=intermediate&author=maya-chen&duration=short&from=2026-08-01&to=2026-08-10&sort=oldest");
+  state.page = 2;
+  assert.equal(
+    blogSearchParams(state).toString(),
+    "q=seo&category=seo&format=checklist&audience=leaders&level=intermediate&author=maya-chen&duration=short&from=2026-08-01&to=2026-08-10&sort=oldest&page=2"
+  );
 });
 
 test("keeps mobile drawer tab focus inside the first and last focusable controls", () => {
